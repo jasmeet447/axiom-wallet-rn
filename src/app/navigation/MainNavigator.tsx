@@ -16,12 +16,20 @@ export type MainStackParamList = {
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
 export const MainNavigator: React.FC = () => {
+  const darkHeader = {
+    headerStyle: { backgroundColor: '#000000' },
+    headerTintColor: '#FFFFFF',
+    headerTitleStyle: { fontWeight: '600' as const },
+    headerShadowVisible: false,
+  };
+
   return (
     <Stack.Navigator
       initialRouteName="Wallet"
       screenOptions={{
         headerShown: true,
         animation: 'slide_from_right',
+        ...darkHeader,
       }}
     >
       <Stack.Screen
