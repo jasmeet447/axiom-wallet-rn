@@ -27,7 +27,7 @@ export const MainNavigator: React.FC = () => {
       <Stack.Screen
         name="Wallet"
         component={WalletScreen}
-        options={{ title: 'My Wallet' }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="Send"
