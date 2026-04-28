@@ -20,10 +20,10 @@ import {
 } from 'react-native-vision-camera';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
 import { blockchainApi } from '../../../core/api/blockchainApi';
-import type { MainStackParamList } from '../../../app/navigation/MainNavigator';
+import type { MainTabParamList } from '../../../app/navigation/MainNavigator';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -57,7 +57,7 @@ function calcFeeEth(gasPrice: string, gasLimit: string): number {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = 'address' | 'amount' | 'confirm' | 'success';
-type Nav = NativeStackNavigationProp<MainStackParamList, 'Send'>;
+type Nav = BottomTabNavigationProp<MainTabParamList, 'Send'>;
 
 const ORDERED: Step[] = ['address', 'amount', 'confirm'];
 const STEP_LABELS = ['Recipient', 'Amount', 'Confirm'];
@@ -615,7 +615,7 @@ export const SendScreen: React.FC = () => {
               <PrimaryButton
                 label="Done"
                 iconLeft="checkmark"
-                onPress={() => navigation.goBack()}
+                onPress={() => navigation.navigate('Home')}
               />
             </View>
           )}

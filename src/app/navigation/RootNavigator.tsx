@@ -6,7 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { UnlockScreen } from '../../modules/auth/screens/UnlockScreen';
-import { useBiometricAuth } from '../../modules/auth/hooks/useBiometricAuth';
+import { useAppSelector } from '../../store/hooks';
 
 type RootStackParamList = {
   Auth: undefined;
@@ -16,7 +16,7 @@ type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-/** Shown while WdkProvider bootstrap is running — keeps the splash-screen feel. */
+/** Shown while WdkProvider bootstrap is running. */
 const BootSplash: React.FC = () => (
   <View style={splash.container}>
     <ActivityIndicator size="large" color="#0A84FF" />
@@ -33,8 +33,10 @@ const splash = StyleSheet.create({
 });
 
 export const RootNavigator: React.FC = () => {
-  // isInitialised is set to true by WdkProvider once the keychain check completes.
-  const { isInitialised, isAuthenticated, isUnlocked } = useBiometricAuth();
+  // Read auth state directly from Redux — single source of truth.
+  const { isInitialised, isAuthenticated, isUnlocked } = useAppSelector(
+    state => state.auth,
+  );
 
   if (!isInitialised) {
     return <BootSplash />;

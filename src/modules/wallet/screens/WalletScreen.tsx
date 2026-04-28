@@ -13,10 +13,10 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useWdkWallet } from '../hooks/useWdkWallet';
 import { blockchainApi } from '../../../core/api/blockchainApi';
-import type { MainStackParamList } from '../../../app/navigation/MainNavigator';
+import type { MainTabParamList } from '../../../app/navigation/MainNavigator';
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
@@ -44,7 +44,7 @@ function formatBalance(raw: string | null): string {
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type Nav = NativeStackNavigationProp<MainStackParamList, 'Wallet'>;
+type Nav = BottomTabNavigationProp<MainTabParamList, 'Home'>;
 
 // ─── ActionButton ─────────────────────────────────────────────────────────────
 interface ActionButtonProps {
