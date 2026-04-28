@@ -7,6 +7,13 @@ import {
   View,
   Text,
 } from 'react-native';
+import {
+  darkPalette,
+  spacing,
+  borderRadius,
+  fontSize,
+  fontWeight,
+} from '../../theme';
 
 interface InputProps {
   value: string;
@@ -41,7 +48,7 @@ export const Input: React.FC<InputProps> = ({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#999"
+        placeholderTextColor={darkPalette.subtle}
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
@@ -54,30 +61,31 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.sm,
+    color: darkPalette.text,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
-    borderRadius: 8,
+    borderColor: darkPalette.border,
+    borderRadius: borderRadius.lg,
     paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    backgroundColor: '#FFF',
+    paddingHorizontal: spacing.md,
+    fontSize: fontSize.md,
+    backgroundColor: darkPalette.inputBg,
+    color: darkPalette.text,
     minHeight: 48,
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: darkPalette.error,
   },
   error: {
-    fontSize: 12,
-    color: '#FF3B30',
-    marginTop: 4,
+    fontSize: fontSize.xs,
+    color: darkPalette.error,
+    marginTop: spacing.xs,
   },
 });

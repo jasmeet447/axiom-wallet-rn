@@ -11,17 +11,9 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { useBiometricAuth } from '../hooks/useBiometricAuth';
-
-const DARK = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  text: '#FFFFFF',
-  subtle: '#8E8E93',
-  primary: '#0A84FF',
-  error: '#FF453A',
-  errorBg: '#2C1214',
-  border: '#38383A',
-};
+import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
+import { AuthStrings } from '../../../constants/strings';
+import { AppIconCircle, ErrorBanner } from '../../../shared/components';
 
 export const UnlockScreen: React.FC = () => {
   const { unlock, isLoading, error } = useBiometricAuth();
@@ -39,43 +31,28 @@ export const UnlockScreen: React.FC = () => {
   }, []);
 
   const biometricLabel =
-    Platform.OS === 'ios' ? 'Face ID / Touch ID' : 'Biometrics';
+    Platform.OS === 'ios'
+      ? AuthStrings.unlock.biometricIos
+      : AuthStrings.unlock.biometricAndroid;
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        {/* Icon */}
-        <View style={styles.iconWrap}>
-          <Ionicons name="lock-closed" size={64} color={DARK.primary} />
-        </View>
+        <AppIconCircle iconName="lock-closed" iconSize={64} diameter={112} />
 
-        {/* Heading */}
-        <Text style={styles.title}>Welcome Back</Text>
-        <Text style={styles.subtitle}>
-          Verify your identity to access your wallet
-        </Text>
+        <Text style={styles.title}>{AuthStrings.unlock.title}</Text>
+        <Text style={styles.subtitle}>{AuthStrings.unlock.subtitle}</Text>
 
-        {/* Error banner */}
         {error ? (
-          <View style={styles.errorBanner}>
-            <Ionicons
-              name="alert-circle"
-              size={18}
-              color={DARK.error}
-              style={styles.errorIcon}
-            />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <ErrorBanner message={error} style={styles.errorBanner} />
         ) : null}
 
-        {/* Spacer */}
         <View style={styles.spacer} />
 
-        {/* Primary action */}
         {isLoading ? (
           <ActivityIndicator
             size="large"
-            color={DARK.primary}
+            color={darkPalette.primary}
             style={styles.loader}
           />
         ) : (
@@ -87,19 +64,18 @@ export const UnlockScreen: React.FC = () => {
             <Ionicons
               name={Platform.OS === 'ios' ? 'face-id' : 'finger-print'}
               size={24}
-              color="#FFFFFF"
+              color={darkPalette.text}
               style={styles.btnIcon}
             />
             <Text style={styles.unlockBtnText}>
-              Unlock with {biometricLabel}
+              {AuthStrings.unlock.unlockBtnPrefix}
+              {biometricLabel}
             </Text>
           </TouchableOpacity>
         )}
 
         {attemptCount > 1 && !isLoading && (
-          <Text style={styles.hint}>
-            Make sure your device biometrics are enrolled.
-          </Text>
+          <Text style={styles.hint}>{AuthStrings.unlock.enrollHint}</Text>
         )}
       </View>
     </SafeAreaView>
@@ -109,74 +85,44 @@ export const UnlockScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: DARK.bg,
+    backgroundColor: darkPalette.bg,
   },
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  iconWrap: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: DARK.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: DARK.border,
+    paddingHorizontal: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: DARK.text,
-    marginBottom: 8,
+    ...typography.h1,
+    color: darkPalette.text,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: DARK.subtle,
+    ...typography.bodyMedium,
+    color: darkPalette.subtle,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: DARK.errorBg,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: DARK.error,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: 4,
-  },
-  errorIcon: {
-    marginRight: 8,
-  },
-  errorText: {
-    color: DARK.error,
-    fontSize: 14,
-    flex: 1,
-    lineHeight: 20,
+    width: '100%',
   },
   spacer: {
     flex: 1,
     maxHeight: 48,
   },
   loader: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   unlockBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DARK.primary,
-    borderRadius: 14,
+    backgroundColor: darkPalette.primary,
+    borderRadius: borderRadius.xl - 2,
     paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingHorizontal: spacing.xl,
     width: '100%',
     minHeight: 56,
   },
@@ -184,14 +130,13 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   unlockBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    ...typography.labelLarge,
+    color: darkPalette.text,
   },
   hint: {
-    marginTop: 16,
-    fontSize: 13,
-    color: DARK.subtle,
+    marginTop: spacing.md,
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
     textAlign: 'center',
   },
 });

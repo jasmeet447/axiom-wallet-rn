@@ -11,22 +11,11 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
-
-// ─── Design tokens (consistent with Dashboard) ────────────────────────────────
-const C = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  cardAlt: '#2C2C2E',
-  text: '#FFFFFF',
-  subtle: '#8E8E93',
-  primary: '#0A84FF',
-  success: '#30D158',
-  border: '#38383A',
-};
+import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
+import { ReceiveStrings } from '../../../constants/strings';
 
 const QR_SIZE = 220;
 
-// ─── ReceiveScreen ────────────────────────────────────────────────────────────
 export const ReceiveScreen: React.FC = () => {
   const { activeWallet } = useWdkWallet();
   const address = activeWallet?.address ?? '';
@@ -35,7 +24,10 @@ export const ReceiveScreen: React.FC = () => {
 
   const copyAddress = useCallback(() => {
     if (!address) {
-      Alert.alert('No address', 'No wallet address available to copy.');
+      Alert.alert(
+        ReceiveStrings.alerts.noAddressTitle,
+        ReceiveStrings.alerts.noAddressMessage,
+      );
       return;
     }
     Clipboard.setString(address);
@@ -46,40 +38,45 @@ export const ReceiveScreen: React.FC = () => {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.container}>
-        {/* ── Subtitle ───────────────────────────────── */}
-        <Text style={s.subtitle}>
-          Share this address to receive ETH or ERC-20 tokens.
-        </Text>
+        <Text style={s.subtitle}>{ReceiveStrings.subtitle}</Text>
 
-        {/* ── QR card ────────────────────────────────── */}
+        {/* QR card */}
         <View style={s.qrCard}>
           {address ? (
             <QRCode
               value={address}
               size={QR_SIZE}
-              backgroundColor={C.card}
-              color={C.text}
+              backgroundColor={darkPalette.card}
+              color={darkPalette.text}
               ecl="M"
             />
           ) : (
             <View style={s.qrPlaceholder}>
-              <Ionicons name="wallet-outline" size={48} color={C.subtle} />
-              <Text style={s.qrPlaceholderText}>No wallet active</Text>
+              <Ionicons
+                name="wallet-outline"
+                size={48}
+                color={darkPalette.subtle}
+              />
+              <Text style={s.qrPlaceholderText}>
+                {ReceiveStrings.qrPlaceholderText}
+              </Text>
             </View>
           )}
         </View>
 
-        {/* ── Full address ───────────────────────────── */}
+        {/* Full address */}
         {address ? (
           <View style={s.addressCard}>
-            <Text style={s.addressLabel}>Wallet Address</Text>
+            <Text style={s.addressLabel}>
+              {ReceiveStrings.addressCard.label}
+            </Text>
             <Text style={s.addressFull} selectable>
               {address}
             </Text>
           </View>
         ) : null}
 
-        {/* ── Copy button ────────────────────────────── */}
+        {/* Copy button */}
         <TouchableOpacity
           style={[s.copyBtn, copied && s.copyBtnDone]}
           onPress={copyAddress}
@@ -89,10 +86,12 @@ export const ReceiveScreen: React.FC = () => {
           <Ionicons
             name={copied ? 'checkmark-circle' : 'copy-outline'}
             size={20}
-            color={copied ? C.success : C.primary}
+            color={copied ? darkPalette.success : darkPalette.primary}
           />
           <Text style={[s.copyBtnText, copied && s.copyBtnTextDone]}>
-            {copied ? 'Copied!' : 'Copy Address'}
+            {copied
+              ? ReceiveStrings.copyBtn.done
+              : ReceiveStrings.copyBtn.default}
           </Text>
         </TouchableOpacity>
       </View>
@@ -100,36 +99,33 @@ export const ReceiveScreen: React.FC = () => {
   );
 };
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: darkPalette.bg },
   container: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 
   subtitle: {
-    fontSize: 14,
-    color: C.subtle,
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
     maxWidth: 280,
   },
 
-  // QR
   qrCard: {
-    backgroundColor: C.card,
+    backgroundColor: darkPalette.card,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 24,
-    marginBottom: 24,
-    // subtle glow
-    shadowColor: C.primary,
+    borderColor: darkPalette.border,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    shadowColor: darkPalette.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
     shadowRadius: 20,
@@ -142,54 +138,47 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 12,
   },
-  qrPlaceholderText: { color: C.subtle, fontSize: 14 },
+  qrPlaceholderText: { ...typography.bodySmall, color: darkPalette.subtle },
 
-  // Address
   addressCard: {
     width: '100%',
-    backgroundColor: C.card,
-    borderRadius: 14,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 20,
+    borderColor: darkPalette.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
   addressLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.subtle,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
+    ...typography.overline,
+    color: darkPalette.subtle,
+    marginBottom: spacing.sm,
   },
   addressFull: {
-    fontSize: 13,
-    color: C.text,
-    fontFamily: 'monospace',
+    ...typography.mono,
+    color: darkPalette.text,
     lineHeight: 20,
   },
 
-  // Copy button
   copyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
     width: '100%',
     paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: '#0A84FF18',
+    borderRadius: borderRadius.lg,
+    backgroundColor: darkPalette.primaryFaint,
     borderWidth: 1,
-    borderColor: '#0A84FF60',
+    borderColor: darkPalette.primaryBorder,
   },
   copyBtnDone: {
-    backgroundColor: '#30D15818',
-    borderColor: '#30D15860',
+    backgroundColor: darkPalette.successFaint,
+    borderColor: darkPalette.successBorder,
   },
   copyBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: C.primary,
+    ...typography.labelLarge,
+    color: darkPalette.primary,
   },
-  copyBtnTextDone: { color: C.success },
+  copyBtnTextDone: { color: darkPalette.success },
 });

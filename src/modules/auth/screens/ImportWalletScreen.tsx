@@ -15,32 +15,19 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
+import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
+import { AuthStrings, CommonStrings } from '../../../constants/strings';
+import {
+  AppIconCircle,
+  ErrorBanner,
+  ScreenHeader,
+} from '../../../shared/components';
+import { normaliseSeedPhrase } from '../../../core/utils/formatters';
 import type { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
-
-const DARK = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  text: '#FFFFFF',
-  subtle: '#8E8E93',
-  primary: '#0A84FF',
-  success: '#30D158',
-  error: '#FF453A',
-  errorBg: '#2C1214',
-  border: '#38383A',
-  inputBg: '#2C2C2E',
-};
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ImportWallet'>;
 
 const VALID_WORD_COUNTS = [12, 24];
-
-function normalisePhrase(raw: string): string[] {
-  return raw
-    .trim()
-    .toLowerCase()
-    .split(/[\s,]+/)
-    .filter(Boolean);
-}
 
 export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
   const { importWallet } = useWdkWallet();
@@ -49,7 +36,7 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const words = normalisePhrase(phraseInput);
+  const words = normaliseSeedPhrase(phraseInput);
   const wordCount = words.length;
 
   const isValidWordCount =
@@ -58,10 +45,10 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
 
   const wordCountColor =
     wordCount === 0
-      ? DARK.subtle
+      ? darkPalette.subtle
       : VALID_WORD_COUNTS.includes(wordCount)
-      ? DARK.success
-      : DARK.error;
+      ? darkPalette.success
+      : darkPalette.error;
 
   const handleImport = useCallback(async () => {
     if (!canSubmit) return;
@@ -70,11 +57,13 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
 
     try {
       const canonicalPhrase = words.join(' ');
-      await importWallet('Imported Wallet', canonicalPhrase);
+      await importWallet(
+        AuthStrings.importWallet.defaultWalletName,
+        canonicalPhrase,
+      );
       setSuccess(true);
-      // Navigation handled by RootNavigator reacting to Redux state change
     } catch (e: any) {
-      setError(e?.message ?? 'An unexpected error occurred.');
+      setError(e?.message ?? CommonStrings.errors.unknown);
     } finally {
       setIsLoading(false);
     }
@@ -86,33 +75,29 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={26} color={DARK.primary} />
-        </TouchableOpacity>
+        <ScreenHeader onBack={() => navigation.goBack()} />
 
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <View style={styles.iconWrap}>
-            <Ionicons name="download" size={48} color={DARK.primary} />
-          </View>
-          <Text style={styles.title}>Import Wallet</Text>
+          <AppIconCircle iconName="download" iconSize={48} diameter={88} />
+          <Text style={styles.title}>{AuthStrings.importWallet.title}</Text>
           <Text style={styles.subtitle}>
-            Enter your 12 or 24-word secret recovery phrase. Words can be
-            separated by spaces or commas.
+            {AuthStrings.importWallet.subtitle}
           </Text>
 
           {/* Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputHeader}>
-              <Text style={styles.inputLabel}>Seed Phrase</Text>
+              <Text style={styles.inputLabel}>
+                {AuthStrings.importWallet.seedPhraseLabel}
+              </Text>
               <Text style={[styles.wordCount, { color: wordCountColor }]}>
-                {wordCount} {wordCount === 1 ? 'word' : 'words'}
+                {wordCount}{' '}
+                {wordCount === 1
+                  ? AuthStrings.importWallet.wordCountSingular
+                  : AuthStrings.importWallet.wordCountPlural}
                 {VALID_WORD_COUNTS.includes(wordCount) ? ' ✓' : ''}
               </Text>
             </View>
@@ -127,8 +112,8 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
                 setError(null);
                 setPhraseInput(text);
               }}
-              placeholder="Enter your seed phrase…"
-              placeholderTextColor={DARK.subtle}
+              placeholder={AuthStrings.importWallet.seedPhrasePlaceholder}
+              placeholderTextColor={darkPalette.subtle}
               multiline
               numberOfLines={5}
               autoCapitalize="none"
@@ -139,42 +124,30 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
             />
             {!isValidWordCount && wordCount > 0 && (
               <Text style={styles.inputHint}>
-                A seed phrase must be exactly 12 or 24 words.
+                {AuthStrings.importWallet.invalidWordCount}
               </Text>
             )}
           </View>
 
-          {/* Error banner */}
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Ionicons
-                name="alert-circle"
-                size={16}
-                color={DARK.error}
-                style={styles.iconMr}
-              />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <ErrorBanner message={error} /> : null}
 
           {/* Security note */}
           <View style={styles.securityNote}>
             <Ionicons
               name="shield"
               size={16}
-              color={DARK.subtle}
+              color={darkPalette.subtle}
               style={styles.iconMr}
             />
             <Text style={styles.securityNoteText}>
-              Your phrase is encrypted locally and never transmitted.
+              {AuthStrings.importWallet.securityNote}
             </Text>
           </View>
 
-          {/* CTA */}
           {isLoading ? (
             <ActivityIndicator
               size="large"
-              color={success ? DARK.success : DARK.primary}
+              color={success ? darkPalette.success : darkPalette.primary}
               style={styles.loader}
             />
           ) : (
@@ -187,10 +160,12 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
               <Ionicons
                 name="lock-closed"
                 size={20}
-                color="#FFF"
+                color={darkPalette.text}
                 style={styles.iconMr}
               />
-              <Text style={styles.importBtnText}>Import Wallet</Text>
+              <Text style={styles.importBtnText}>
+                {AuthStrings.importWallet.importBtn}
+              </Text>
             </TouchableOpacity>
           )}
         </ScrollView>
@@ -200,96 +175,75 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: DARK.bg },
+  safe: { flex: 1, backgroundColor: darkPalette.bg },
   flex: { flex: 1 },
-  scroll: { flexGrow: 1, padding: 24 },
-  backBtn: { paddingHorizontal: 16, paddingTop: 8 },
-  iconWrap: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: DARK.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: DARK.border,
-  },
+  scroll: { flexGrow: 1, padding: spacing.lg },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: DARK.text,
+    ...typography.displayMedium,
+    color: darkPalette.text,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: 15,
-    color: DARK.subtle,
+    ...typography.bodyMedium,
+    color: darkPalette.subtle,
     textAlign: 'center',
-    lineHeight: 22,
     marginBottom: 28,
   },
   inputWrapper: {
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   inputHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: DARK.text },
-  wordCount: { fontSize: 13, fontWeight: '500' },
+  inputLabel: { ...typography.labelMedium, color: darkPalette.text },
+  wordCount: { ...typography.bodySmall },
   phraseInput: {
-    backgroundColor: DARK.inputBg,
-    borderRadius: 12,
+    backgroundColor: darkPalette.inputBg,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: DARK.border,
-    color: DARK.text,
+    borderColor: darkPalette.border,
+    color: darkPalette.text,
     fontSize: 15,
     padding: 14,
     minHeight: 120,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     lineHeight: 22,
   },
-  phraseInputError: { borderColor: DARK.error },
-  phraseInputSuccess: { borderColor: DARK.success },
+  phraseInputError: { borderColor: darkPalette.error },
+  phraseInputSuccess: { borderColor: darkPalette.success },
   inputHint: {
     marginTop: 6,
-    fontSize: 12,
-    color: DARK.error,
+    ...typography.bodySmall,
+    color: darkPalette.error,
   },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: DARK.errorBg,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: DARK.error,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: { color: DARK.error, fontSize: 14, flex: 1 },
   securityNote: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 28,
   },
-  securityNoteText: { color: DARK.subtle, fontSize: 13, flex: 1 },
-  loader: { marginBottom: 16 },
+  securityNoteText: {
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
+    flex: 1,
+  },
+  loader: { marginBottom: spacing.md },
   importBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DARK.primary,
-    borderRadius: 14,
+    backgroundColor: darkPalette.primary,
+    borderRadius: borderRadius.xl - 2,
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
     width: '100%',
     minHeight: 56,
   },
   btnDisabled: { opacity: 0.4 },
-  importBtnText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
-  iconMr: { marginRight: 8 },
+  importBtnText: { ...typography.labelLarge, color: darkPalette.text },
+  iconMr: { marginRight: spacing.sm },
 });
+

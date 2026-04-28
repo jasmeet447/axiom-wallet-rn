@@ -7,6 +7,13 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import {
+  darkPalette,
+  spacing,
+  borderRadius,
+  fontSize,
+  fontWeight,
+} from '../../theme';
 
 interface ButtonProps {
   title: string;
@@ -63,37 +70,37 @@ export const Button: React.FC<ButtonProps> = ({
 const styles = StyleSheet.create({
   button: {
     paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 56,
   },
   primaryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: darkPalette.primary,
   },
   secondaryButton: {
-    backgroundColor: '#5856D6',
+    backgroundColor: darkPalette.secondary,
   },
   outlineButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: darkPalette.primary,
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.4,
   },
   text: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: darkPalette.text,
   },
   secondaryText: {
-    color: '#FFFFFF',
+    color: darkPalette.text,
   },
   outlineText: {
-    color: '#007AFF',
+    color: darkPalette.primary,
   },
 });

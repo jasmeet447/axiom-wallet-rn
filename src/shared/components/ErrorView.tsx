@@ -1,5 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  darkPalette,
+  spacing,
+  borderRadius,
+  fontSize,
+  fontWeight,
+} from '../../theme';
 
 interface ErrorViewProps {
   message: string;
@@ -25,27 +32,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    backgroundColor: darkPalette.bg,
+    padding: spacing.lg,
   },
   errorIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
   message: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: fontSize.md,
+    color: darkPalette.subtle,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   retryButton: {
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: darkPalette.primary,
+    borderRadius: borderRadius.md,
   },
   retryText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: darkPalette.text,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
   },
 });

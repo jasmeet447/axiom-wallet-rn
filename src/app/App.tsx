@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusBar, useColorScheme } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Provider } from 'react-redux';
@@ -14,7 +14,7 @@ function App() {
   const barStyle = isDarkMode ? 'light-content' : 'dark-content';
   console.log('here ----- ');
   return (
-    <GestureHandlerRootView>
+    <GestureHandlerRootView style={styles.root}>
       <Provider store={store}>
         <SafeAreaProvider>
           <AppProviders>
@@ -33,5 +33,9 @@ function App() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
 
 export default App;

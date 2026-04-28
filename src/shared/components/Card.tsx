@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, View, StyleSheet } from 'react-native';
+import { darkPalette, spacing, borderRadius, shadows } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
@@ -25,14 +26,12 @@ export const Card: React.FC<CardProps> = ({ children, onPress, style }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1,
+    borderColor: darkPalette.border,
+    padding: spacing.md,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...shadows.md,
   },
 });

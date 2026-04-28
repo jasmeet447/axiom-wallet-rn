@@ -12,21 +12,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
+import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
+import { AuthStrings, CommonStrings } from '../../../constants/strings';
+import {
+  AppIconCircle,
+  ErrorBanner,
+  ScreenHeader,
+} from '../../../shared/components';
 import type { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
-
-const DARK = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  card2: '#2C2C2E',
-  text: '#FFFFFF',
-  subtle: '#8E8E93',
-  primary: '#0A84FF',
-  success: '#30D158',
-  warning: '#FF9F0A',
-  warningBg: '#2C2000',
-  error: '#FF453A',
-  border: '#38383A',
-};
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'CreateWallet'>;
 
@@ -35,7 +28,6 @@ type Step = 'generate' | 'backup' | 'confirm';
 export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
   const { generateMnemonic, createWallet } = useWdkWallet();
   const [step, setStep] = useState<Step>('generate');
-  // Generate a real BIP-39 mnemonic once on mount using @scure/bip39
   const [mnemonic] = useState<string>(() => generateMnemonic());
   const [seedWords] = useState<string[]>(() => mnemonic.split(' '));
   const [revealed, setRevealed] = useState(false);
@@ -43,17 +35,13 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the wallet name "Main Wallet" by default; can be made configurable later
-  const WALLET_ID = 'Main Wallet';
-
   const handleCreate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await createWallet(WALLET_ID);
-      // Navigation is handled by RootNavigator reacting to Redux auth state change
+      await createWallet(AuthStrings.createWallet.defaultWalletName);
     } catch (e: any) {
-      setError(e?.message ?? 'An unexpected error occurred.');
+      setError(e?.message ?? CommonStrings.errors.unknown);
     } finally {
       setIsLoading(false);
     }
@@ -61,25 +49,19 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderGenerateStep = () => (
     <View style={styles.stepContainer}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="wallet" size={52} color={DARK.primary} />
-      </View>
-      <Text style={styles.title}>Create New Wallet</Text>
-      <Text style={styles.subtitle}>
-        A unique wallet will be generated for you. You will need to save your
-        secret recovery phrase to restore access if you change devices.
-      </Text>
+      <AppIconCircle iconName="wallet" iconSize={52} diameter={96} />
+      <Text style={styles.title}>{AuthStrings.createWallet.title}</Text>
+      <Text style={styles.subtitle}>{AuthStrings.createWallet.subtitle}</Text>
 
       <View style={styles.warningCard}>
         <Ionicons
           name="warning"
           size={20}
-          color={DARK.warning}
+          color={darkPalette.warning}
           style={styles.warnIcon}
         />
         <Text style={styles.warningText}>
-          Never share your seed phrase. Anyone with it has full access to your
-          wallet.
+          {AuthStrings.createWallet.warningMessage}
         </Text>
       </View>
 
@@ -88,17 +70,19 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
         onPress={() => setStep('backup')}
         activeOpacity={0.8}
       >
-        <Text style={styles.primaryBtnText}>View Seed Phrase</Text>
-        <Ionicons name="arrow-forward" size={18} color="#FFF" />
+        <Text style={styles.primaryBtnText}>
+          {AuthStrings.createWallet.viewSeedPhrase}
+        </Text>
+        <Ionicons name="arrow-forward" size={18} color={darkPalette.text} />
       </TouchableOpacity>
     </View>
   );
 
   const renderBackupStep = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.title}>Save Your Seed Phrase</Text>
+      <Text style={styles.title}>{AuthStrings.createWallet.backupTitle}</Text>
       <Text style={styles.subtitle}>
-        Write these words down in order and store them somewhere safe.
+        {AuthStrings.createWallet.backupSubtitle}
       </Text>
 
       <TouchableOpacity
@@ -117,8 +101,14 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.seedBlur}>
-            <Ionicons name="eye-off-outline" size={32} color={DARK.subtle} />
-            <Text style={styles.seedBlurText}>Tap to reveal</Text>
+            <Ionicons
+              name="eye-off-outline"
+              size={32}
+              color={darkPalette.subtle}
+            />
+            <Text style={styles.seedBlurText}>
+              {AuthStrings.createWallet.tapToReveal}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -129,34 +119,28 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
         activeOpacity={0.8}
         disabled={!revealed}
       >
-        <Text style={styles.primaryBtnText}>I've Saved It</Text>
-        <Ionicons name="arrow-forward" size={18} color="#FFF" />
+        <Text style={styles.primaryBtnText}>
+          {AuthStrings.createWallet.iSavedIt}
+        </Text>
+        <Ionicons name="arrow-forward" size={18} color={darkPalette.text} />
       </TouchableOpacity>
     </View>
   );
 
   const renderConfirmStep = () => (
     <View style={styles.stepContainer}>
-      <View style={styles.iconWrap}>
-        <Ionicons name="shield-checkmark" size={52} color={DARK.success} />
-      </View>
-      <Text style={styles.title}>Ready to Go</Text>
+      <AppIconCircle
+        iconName="shield-checkmark"
+        iconSize={52}
+        diameter={96}
+        iconColor={darkPalette.success}
+      />
+      <Text style={styles.title}>{AuthStrings.createWallet.confirmTitle}</Text>
       <Text style={styles.subtitle}>
-        Your wallet is ready. Biometric authentication will be used to unlock it
-        on future launches.
+        {AuthStrings.createWallet.confirmSubtitle}
       </Text>
 
-      {error ? (
-        <View style={styles.errorBanner}>
-          <Ionicons
-            name="alert-circle"
-            size={16}
-            color={DARK.error}
-            style={styles.iconMr}
-          />
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      ) : null}
+      {error ? <ErrorBanner message={error} style={styles.fullWidth} /> : null}
 
       <TouchableOpacity
         style={[styles.checkRow, confirmed && styles.checkRowActive]}
@@ -164,17 +148,19 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
         activeOpacity={0.8}
       >
         <View style={[styles.checkbox, confirmed && styles.checkboxChecked]}>
-          {confirmed && <Ionicons name="checkmark" size={14} color="#FFF" />}
+          {confirmed && (
+            <Ionicons name="checkmark" size={14} color={darkPalette.text} />
+          )}
         </View>
         <Text style={styles.checkLabel}>
-          I confirm I have securely saved my seed phrase.
+          {AuthStrings.createWallet.confirmCheckboxLabel}
         </Text>
       </TouchableOpacity>
 
       {isLoading ? (
         <ActivityIndicator
           size="large"
-          color={DARK.primary}
+          color={darkPalette.primary}
           style={styles.loader}
         />
       ) : (
@@ -187,10 +173,12 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
           <Ionicons
             name="finger-print"
             size={20}
-            color="#FFF"
+            color={darkPalette.text}
             style={styles.iconMr}
           />
-          <Text style={styles.primaryBtnText}>Create Wallet</Text>
+          <Text style={styles.primaryBtnText}>
+            {AuthStrings.createWallet.createWalletBtn}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -198,16 +186,11 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-      >
-        <Ionicons name="chevron-back" size={26} color={DARK.primary} />
-      </TouchableOpacity>
+      <ScreenHeader onBack={() => navigation.goBack()} />
 
       {/* Step indicator */}
       <View style={styles.steps}>
-        {(['generate', 'backup', 'confirm'] as Step[]).map((s, _i) => (
+        {(['generate', 'backup', 'confirm'] as Step[]).map(s => (
           <View
             key={s}
             style={[styles.stepDot, step === s && styles.stepDotActive]}
@@ -228,90 +211,86 @@ export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: DARK.bg },
-  scroll: { flexGrow: 1, padding: 24 },
-  backBtn: { paddingHorizontal: 16, paddingTop: 8 },
+  safe: { flex: 1, backgroundColor: darkPalette.bg },
+  scroll: { flexGrow: 1, padding: spacing.lg },
   steps: {
     flexDirection: 'row',
     alignSelf: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   stepDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DARK.border,
+    backgroundColor: darkPalette.border,
   },
-  stepDotActive: { backgroundColor: DARK.primary, width: 20 },
+  stepDotActive: { backgroundColor: darkPalette.primary, width: 20 },
   stepContainer: { alignItems: 'center', paddingTop: 12 },
-  iconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: DARK.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: DARK.border,
-  },
+  fullWidth: { width: '100%' },
   title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: DARK.text,
+    ...typography.displayMedium,
+    color: darkPalette.text,
     marginBottom: 10,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 15,
-    color: DARK.subtle,
+    ...typography.bodyMedium,
+    color: darkPalette.subtle,
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   warningCard: {
     flexDirection: 'row',
-    backgroundColor: DARK.warningBg,
-    borderRadius: 12,
+    backgroundColor: darkPalette.warningBg,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: DARK.warning,
+    borderColor: darkPalette.warning,
     padding: 14,
-    marginBottom: 32,
+    marginBottom: spacing.xl,
     width: '100%',
   },
   warnIcon: { marginRight: 10, marginTop: 1 },
-  warningText: { color: DARK.warning, fontSize: 14, flex: 1, lineHeight: 20 },
+  warningText: {
+    ...typography.bodySmall,
+    color: darkPalette.warning,
+    flex: 1,
+    lineHeight: 20,
+  },
   seedCard: {
-    backgroundColor: DARK.card,
-    borderRadius: 14,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: DARK.border,
+    borderColor: darkPalette.border,
     width: '100%',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
     minHeight: 160,
     overflow: 'hidden',
   },
   seedGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    padding: 16,
-    gap: 8,
+    padding: spacing.md,
+    gap: spacing.sm,
   },
   seedWord: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: DARK.card2,
-    borderRadius: 8,
+    backgroundColor: darkPalette.cardAlt,
+    borderRadius: borderRadius.md,
     paddingHorizontal: 10,
     paddingVertical: 6,
     width: '46%',
   },
-  seedIndex: { fontSize: 12, color: DARK.subtle, marginRight: 4, width: 18 },
+  seedIndex: {
+    ...typography.caption,
+    color: darkPalette.subtle,
+    marginRight: 4,
+    width: 18,
+  },
   seedText: {
-    fontSize: 14,
-    color: DARK.text,
-    fontFamily: 'monospace',
+    ...typography.mono,
+    color: darkPalette.text,
     flex: 1,
   },
   seedBlur: {
@@ -319,59 +298,56 @@ const styles = StyleSheet.create({
     minHeight: 160,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: spacing.sm,
   },
-  seedBlurText: { color: DARK.subtle, fontSize: 14 },
+  seedBlurText: { ...typography.bodySmall, color: darkPalette.subtle },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: DARK.card,
-    borderRadius: 12,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: DARK.border,
+    borderColor: darkPalette.border,
     padding: 14,
     width: '100%',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
     gap: 12,
   },
-  checkRowActive: { borderColor: DARK.primary },
+  checkRowActive: { borderColor: darkPalette.primary },
   checkbox: {
     width: 22,
     height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: DARK.border,
+    borderColor: darkPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: { backgroundColor: DARK.primary, borderColor: DARK.primary },
-  checkLabel: { flex: 1, color: DARK.text, fontSize: 14, lineHeight: 20 },
+  checkboxChecked: {
+    backgroundColor: darkPalette.primary,
+    borderColor: darkPalette.primary,
+  },
+  checkLabel: {
+    ...typography.bodySmall,
+    flex: 1,
+    color: darkPalette.text,
+    lineHeight: 20,
+  },
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DARK.primary,
-    borderRadius: 14,
+    backgroundColor: darkPalette.primary,
+    borderRadius: borderRadius.xl - 2,
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
     width: '100%',
     minHeight: 56,
-    gap: 8,
+    gap: spacing.sm,
   },
   btnDisabled: { opacity: 0.4 },
-  primaryBtnText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
-  loader: { marginBottom: 16 },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2C1214',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: DARK.error,
-    padding: 12,
-    width: '100%',
-    marginBottom: 16,
-  },
-  errorText: { color: DARK.error, fontSize: 14, flex: 1 },
-  iconMr: { marginRight: 8 },
+  primaryBtnText: { ...typography.labelLarge, color: darkPalette.text },
+  loader: { marginBottom: spacing.md },
+  iconMr: { marginRight: spacing.sm },
 });
+

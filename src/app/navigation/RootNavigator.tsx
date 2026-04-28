@@ -2,6 +2,7 @@ import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { darkPalette } from '../../theme';
 
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
@@ -19,14 +20,14 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 /** Shown while WdkProvider bootstrap is running. */
 const BootSplash: React.FC = () => (
   <View style={splash.container}>
-    <ActivityIndicator size="large" color="#0A84FF" />
+    <ActivityIndicator size="large" color={darkPalette.primary} />
   </View>
 );
 
 const splash = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: darkPalette.bg,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { darkPalette } from '../../theme';
 
 import { WalletScreen } from '../../modules/wallet/screens/WalletScreen';
 import { SendScreen } from '../../modules/send/screens/SendScreen';
@@ -62,12 +63,12 @@ export const MainNavigator: React.FC = () => (
         ),
         tabBarLabel: cfg.label,
         // Colours
-        tabBarActiveTintColor: '#0A84FF',
-        tabBarInactiveTintColor: '#8E8E93',
+        tabBarActiveTintColor: darkPalette.primary,
+        tabBarInactiveTintColor: darkPalette.subtle,
         // Tab bar appearance
         tabBarStyle: {
-          backgroundColor: '#000000',
-          borderTopColor: '#38383A',
+          backgroundColor: darkPalette.bg,
+          borderTopColor: darkPalette.border,
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: Platform.OS === 'ios' ? 24 : 10,

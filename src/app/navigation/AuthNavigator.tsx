@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SetupScreen } from '../../modules/auth/screens/SetupScreen';
 import { CreateWalletScreen } from '../../modules/auth/screens/CreateWalletScreen';
 import { ImportWalletScreen } from '../../modules/auth/screens/ImportWalletScreen';
+import { darkPalette } from '../../theme';
 
 export type AuthStackParamList = {
   Setup: undefined;
@@ -19,7 +20,7 @@ export const AuthNavigator: React.FC = () => {
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        contentStyle: { backgroundColor: '#000000' },
+        contentStyle: { backgroundColor: darkPalette.bg },
       }}
     >
       <Stack.Screen name="Setup" component={SetupScreen} />

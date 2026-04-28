@@ -23,49 +23,25 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
 import { blockchainApi } from '../../../core/api/blockchainApi';
+import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
+import { SendStrings } from '../../../constants/strings';
+import {
+  truncateAddress,
+  isValidEVMAddress,
+  calcFeeETH,
+} from '../../../core/utils/formatters';
 import type { MainTabParamList } from '../../../app/navigation/MainNavigator';
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
-const C = {
-  bg: '#000000',
-  card: '#1C1C1E',
-  cardAlt: '#2C2C2E',
-  text: '#FFFFFF',
-  subtle: '#8E8E93',
-  primary: '#0A84FF',
-  success: '#30D158',
-  warning: '#FF9F0A',
-  error: '#FF453A',
-  border: '#38383A',
-};
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const EVM_RE = /^0x[a-fA-F0-9]{40}$/;
-const isValidAddress = (a: string): boolean => EVM_RE.test(a.trim());
-
-function truncate(addr: string): string {
-  if (addr.length < 12) return addr;
-  return `${addr.slice(0, 8)}...${addr.slice(-6)}`;
-}
-
-function calcFeeEth(gasPrice: string, gasLimit: string): number {
-  const p = parseFloat(gasPrice);
-  const l = parseFloat(gasLimit);
-  if (isNaN(p) || isNaN(l)) return 0.0001;
-  return (p * l) / 1e9; // gwei * units → ETH
-}
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 type Step = 'address' | 'amount' | 'confirm' | 'success';
 type Nav = BottomTabNavigationProp<MainTabParamList, 'Send'>;
 
 const ORDERED: Step[] = ['address', 'amount', 'confirm'];
-const STEP_LABELS = ['Recipient', 'Amount', 'Confirm'];
 
 // ─── Inline sub-components ────────────────────────────────────────────────────
 const ErrorRow: React.FC<{ msg: string }> = ({ msg }) => (
   <View style={s.errRow}>
-    <Ionicons name="alert-circle" size={13} color={C.error} />
+    <Ionicons name="alert-circle" size={13} color={darkPalette.error} />
     <Text style={s.errText}>{msg}</Text>
   </View>
 );
@@ -91,14 +67,14 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
     disabled={loading}
   >
     {loading ? (
-      <ActivityIndicator color="#fff" size="small" />
+      <ActivityIndicator color={darkPalette.text} size="small" />
     ) : (
       <>
         {iconLeft && (
           <Ionicons
             name={iconLeft}
             size={18}
-            color="#fff"
+            color={darkPalette.text}
             style={s.btnIconLeft}
           />
         )}
@@ -107,7 +83,7 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
           <Ionicons
             name={iconRight}
             size={18}
-            color="#fff"
+            color={darkPalette.text}
             style={s.btnIconRight}
           />
         )}
@@ -118,8 +94,8 @@ const PrimaryButton: React.FC<PrimaryButtonProps> = ({
 
 const BackButton: React.FC<{ onPress: () => void }> = ({ onPress }) => (
   <TouchableOpacity style={s.backBtn} onPress={onPress} activeOpacity={0.7}>
-    <Ionicons name="arrow-back" size={16} color={C.subtle} />
-    <Text style={s.backText}>Back</Text>
+    <Ionicons name="arrow-back" size={16} color={darkPalette.subtle} />
+    <Text style={s.backText}>{SendStrings.stepLabels[0]}</Text>
   </TouchableOpacity>
 );
 
@@ -161,16 +137,12 @@ export const SendScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
   const { activeWallet } = useWdkWallet();
 
-  // ── Step ─────────────────────────────────────────────────────────────────
   const [step, setStep] = useState<Step>('address');
-
-  // ── Form values ──────────────────────────────────────────────────────────
   const [toAddress, setToAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [addressError, setAddressError] = useState('');
   const [amountError, setAmountError] = useState('');
 
-  // ── Remote data ──────────────────────────────────────────────────────────
   const [balance, setBalance] = useState<string | null>(null);
   const [gasEstimate, setGasEstimate] = useState<{
     gasPrice: string;
@@ -180,7 +152,6 @@ export const SendScreen: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  // ── QR scanner ───────────────────────────────────────────────────────────
   const [scanning, setScanning] = useState(false);
   const device = useCameraDevice('back');
 
@@ -188,15 +159,12 @@ export const SendScreen: React.FC = () => {
     codeTypes: ['qr'],
     onCodeScanned: codes => {
       const val = codes[0]?.value;
-      if (!val) {
-        return;
-      }
+      if (!val) return;
       const raw = val.trim();
-      // Support EIP-681: ethereum:0x...@chainId?...
       const addr = raw.startsWith('ethereum:')
         ? raw.split(':')[1]?.split('@')[0]?.split('?')[0] ?? raw
         : raw;
-      if (isValidAddress(addr)) {
+      if (isValidEVMAddress(addr)) {
         setToAddress(addr);
         setAddressError('');
         setScanning(false);
@@ -210,13 +178,12 @@ export const SendScreen: React.FC = () => {
       setScanning(true);
     } else {
       Alert.alert(
-        'Camera Permission Required',
-        'Enable camera access in Settings to scan QR codes.',
+        SendStrings.scanner.cameraPermissionTitle,
+        SendStrings.scanner.cameraPermissionMessage,
       );
     }
   }, []);
 
-  // ── Fetch balance when entering amount step ───────────────────────────────
   useEffect(() => {
     if (step === 'amount' && activeWallet?.address && balance === null) {
       blockchainApi
@@ -226,14 +193,12 @@ export const SendScreen: React.FC = () => {
     }
   }, [step, activeWallet?.address, balance]);
 
-  // ── Derived values ────────────────────────────────────────────────────────
   const stepIndex = ORDERED.indexOf(step);
   const feeEth = gasEstimate
-    ? calcFeeEth(gasEstimate.gasPrice, gasEstimate.gasLimit)
+    ? calcFeeETH(gasEstimate.gasPrice, gasEstimate.gasLimit)
     : null;
   const totalEth = feeEth !== null ? parseFloat(amount || '0') + feeEth : null;
 
-  // ── Navigation ────────────────────────────────────────────────────────────
   const goBack = useCallback(() => {
     const idx = ORDERED.indexOf(step);
     if (idx > 0) {
@@ -243,15 +208,14 @@ export const SendScreen: React.FC = () => {
     }
   }, [step, navigation]);
 
-  // ── Step transitions ──────────────────────────────────────────────────────
   const goToAmount = useCallback(() => {
     const addr = toAddress.trim();
-    if (!isValidAddress(addr)) {
-      setAddressError('Enter a valid Ethereum address starting with 0x.');
+    if (!isValidEVMAddress(addr)) {
+      setAddressError(SendStrings.errors.invalidAddress);
       return;
     }
     if (addr.toLowerCase() === activeWallet?.address?.toLowerCase()) {
-      setAddressError("You can't send to your own wallet address.");
+      setAddressError(SendStrings.errors.ownAddress);
       return;
     }
     setAddressError('');
@@ -262,11 +226,11 @@ export const SendScreen: React.FC = () => {
     const n = parseFloat(amount);
     const bal = parseFloat(balance ?? '0');
     if (isNaN(n) || n <= 0) {
-      setAmountError('Enter a valid amount greater than 0.');
+      setAmountError(SendStrings.errors.invalidAmount);
       return;
     }
     if (n > bal) {
-      setAmountError('Insufficient balance.');
+      setAmountError(SendStrings.errors.insufficientBalance);
       return;
     }
     setAmountError('');
@@ -278,14 +242,13 @@ export const SendScreen: React.FC = () => {
         amount,
       );
       setGasEstimate(est);
-      const fee = calcFeeEth(est.gasPrice, est.gasLimit);
+      const fee = calcFeeETH(est.gasPrice, est.gasLimit);
       if (n + fee > bal) {
-        setAmountError('Amount + network fee exceeds your available balance.');
+        setAmountError(SendStrings.errors.exceedsBalanceWithFee);
         setFeeLoading(false);
         return;
       }
     } catch {
-      // Fallback: 20 Gwei × 21 000 gas ≈ 0.00042 ETH
       setGasEstimate({ gasPrice: '20', gasLimit: '21000' });
     } finally {
       setFeeLoading(false);
@@ -294,24 +257,19 @@ export const SendScreen: React.FC = () => {
   }, [amount, balance, toAddress, activeWallet]);
 
   const handleSend = useCallback(async () => {
-    if (!activeWallet?.address) {
-      return;
-    }
+    if (!activeWallet?.address) return;
     setSending(true);
     try {
       const result = await blockchainApi.sendTransaction(
         activeWallet.address,
         toAddress,
         amount,
-        '', // Signing via WDK keychain — secure integration point
+        '',
       );
       setTxHash(result.hash);
       setStep('success');
     } catch {
-      Alert.alert(
-        'Transaction Failed',
-        'Could not broadcast the transaction. Check your connection and try again.',
-      );
+      Alert.alert(SendStrings.txFailedTitle, SendStrings.txFailedMessage);
     } finally {
       setSending(false);
     }
@@ -325,10 +283,9 @@ export const SendScreen: React.FC = () => {
     }
   }, []);
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={s.safe}>
-      {/* ── QR Scanner Overlay ─────────────────────────────────────────── */}
+      {/* QR Scanner Overlay */}
       {scanning && device && (
         <View style={s.scannerOverlay}>
           <Camera
@@ -337,7 +294,6 @@ export const SendScreen: React.FC = () => {
             isActive={scanning}
             codeScanner={codeScanner}
           />
-          {/* Dimmed mask with transparent cut-out window */}
           <View style={s.scanDim}>
             <View style={s.scanTop} />
             <View style={s.scanMiddle}>
@@ -351,13 +307,17 @@ export const SendScreen: React.FC = () => {
               <View style={s.scanSide} />
             </View>
             <View style={s.scanBottom}>
-              <Text style={s.scanHint}>Align the QR code within the frame</Text>
+              <Text style={s.scanHint}>{SendStrings.scanner.hint}</Text>
               <TouchableOpacity
                 onPress={() => setScanning(false)}
                 style={s.scanCloseBtn}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="close-circle" size={48} color="#FFFFFF" />
+                <Ionicons
+                  name="close-circle"
+                  size={48}
+                  color={darkPalette.text}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -368,10 +328,10 @@ export const SendScreen: React.FC = () => {
         style={s.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* ── Step progress indicator ────────────────────────────────────── */}
+        {/* Step progress indicator */}
         {step !== 'success' && (
           <View style={s.progress}>
-            {STEP_LABELS.map((label, i) => (
+            {SendStrings.stepLabels.map((label, i) => (
               <React.Fragment key={label}>
                 <View style={s.progressItem}>
                   <View
@@ -382,7 +342,11 @@ export const SendScreen: React.FC = () => {
                     ]}
                   >
                     {stepIndex > i ? (
-                      <Ionicons name="checkmark" size={12} color="#fff" />
+                      <Ionicons
+                        name="checkmark"
+                        size={12}
+                        color={darkPalette.text}
+                      />
                     ) : (
                       <Text
                         style={[s.dotNum, stepIndex === i && s.dotNumActive]}
@@ -397,7 +361,7 @@ export const SendScreen: React.FC = () => {
                     {label}
                   </Text>
                 </View>
-                {i < STEP_LABELS.length - 1 && (
+                {i < SendStrings.stepLabels.length - 1 && (
                   <View
                     style={[s.connector, stepIndex > i && s.connectorActive]}
                   />
@@ -412,25 +376,27 @@ export const SendScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── STEP: ADDRESS ─────────────────────────────────────────── */}
+          {/* STEP: ADDRESS */}
           {step === 'address' && (
             <>
-              <Text style={s.title}>Recipient</Text>
-              <Text style={s.subtitle}>
-                Enter or scan the Ethereum address you want to send to.
-              </Text>
+              <Text style={s.title}>{SendStrings.address.title}</Text>
+              <Text style={s.subtitle}>{SendStrings.address.subtitle}</Text>
 
               <View style={s.card}>
                 <View style={s.rowBetween}>
-                  <Text style={s.fieldLabel}>To address</Text>
+                  <Text style={s.fieldLabel}>
+                    {SendStrings.address.fieldLabel}
+                  </Text>
                   <View style={s.rowEnd}>
                     <TouchableOpacity style={s.pill} onPress={pasteAddress}>
                       <Ionicons
                         name="clipboard-outline"
                         size={13}
-                        color={C.primary}
+                        color={darkPalette.primary}
                       />
-                      <Text style={s.pillText}>Paste</Text>
+                      <Text style={s.pillText}>
+                        {SendStrings.address.paste}
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[s.pill, s.pillScan]}
@@ -439,9 +405,11 @@ export const SendScreen: React.FC = () => {
                       <Ionicons
                         name="scan-outline"
                         size={13}
-                        color={C.primary}
+                        color={darkPalette.primary}
                       />
-                      <Text style={s.pillText}>Scan QR</Text>
+                      <Text style={s.pillText}>
+                        {SendStrings.address.scanQr}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -452,8 +420,8 @@ export const SendScreen: React.FC = () => {
                     setToAddress(t);
                     setAddressError('');
                   }}
-                  placeholder="0x4Ab3..."
-                  placeholderTextColor={C.subtle}
+                  placeholder={SendStrings.address.placeholder}
+                  placeholderTextColor={darkPalette.subtle}
                   autoCapitalize="none"
                   autoCorrect={false}
                   multiline
@@ -463,33 +431,35 @@ export const SendScreen: React.FC = () => {
               </View>
 
               <PrimaryButton
-                label="Continue"
+                label={SendStrings.address.continueBtn}
                 iconRight="arrow-forward"
                 onPress={goToAmount}
               />
             </>
           )}
 
-          {/* ── STEP: AMOUNT ──────────────────────────────────────────── */}
+          {/* STEP: AMOUNT */}
           {step === 'amount' && (
             <>
-              <Text style={s.title}>Amount</Text>
-              <Text style={s.subtitle}>
-                How much ETH would you like to send?
-              </Text>
+              <Text style={s.title}>{SendStrings.amount.title}</Text>
+              <Text style={s.subtitle}>{SendStrings.amount.subtitle}</Text>
 
               <View style={s.recipientPreview}>
                 <Ionicons
                   name="person-circle-outline"
                   size={18}
-                  color={C.subtle}
+                  color={darkPalette.subtle}
                 />
-                <Text style={s.recipientAddr}>{truncate(toAddress)}</Text>
+                <Text style={s.recipientAddr}>
+                  {truncateAddress(toAddress)}
+                </Text>
               </View>
 
               <View style={s.card}>
                 <View style={s.rowBetween}>
-                  <Text style={s.fieldLabel}>Amount (ETH)</Text>
+                  <Text style={s.fieldLabel}>
+                    {SendStrings.amount.fieldLabel}
+                  </Text>
                   {balance !== null && (
                     <TouchableOpacity
                       style={s.pill}
@@ -498,7 +468,9 @@ export const SendScreen: React.FC = () => {
                         setAmountError('');
                       }}
                     >
-                      <Text style={s.pillText}>MAX</Text>
+                      <Text style={s.pillText}>
+                        {SendStrings.amount.maxBtn}
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -510,8 +482,8 @@ export const SendScreen: React.FC = () => {
                       setAmount(t.replace(/[^0-9.]/g, ''));
                       setAmountError('');
                     }}
-                    placeholder="0.0"
-                    placeholderTextColor={C.subtle}
+                    placeholder={SendStrings.amount.placeholder}
+                    placeholderTextColor={darkPalette.subtle}
                     keyboardType="decimal-pad"
                     returnKeyType="done"
                     autoFocus
@@ -521,7 +493,7 @@ export const SendScreen: React.FC = () => {
                 {balance === null ? (
                   <ActivityIndicator
                     size="small"
-                    color={C.subtle}
+                    color={darkPalette.subtle}
                     style={s.balLoader}
                   />
                 ) : (
@@ -533,7 +505,7 @@ export const SendScreen: React.FC = () => {
               </View>
 
               <PrimaryButton
-                label="Preview"
+                label={SendStrings.amount.continueBtn}
                 iconRight="arrow-forward"
                 onPress={goToConfirm}
                 loading={feeLoading}
@@ -542,25 +514,27 @@ export const SendScreen: React.FC = () => {
             </>
           )}
 
-          {/* ── STEP: CONFIRM ─────────────────────────────────────────── */}
+          {/* STEP: CONFIRM */}
           {step === 'confirm' && (
             <>
-              <Text style={s.title}>Confirm</Text>
-              <Text style={s.subtitle}>
-                Review your transaction carefully before sending.
-              </Text>
+              <Text style={s.title}>{SendStrings.confirm.title}</Text>
+              <Text style={s.subtitle}>{SendStrings.confirm.subtitle}</Text>
 
               <View style={s.summaryCard}>
-                <SummaryRow label="To" value={toAddress} mono />
+                <SummaryRow
+                  label={SendStrings.confirm.rows.to}
+                  value={toAddress}
+                  mono
+                />
                 <SummaryDivider />
                 <SummaryRow
-                  label="Amount"
+                  label={SendStrings.confirm.rows.amount}
                   value={`${parseFloat(amount).toFixed(4)} ETH`}
                   bold
                 />
                 <SummaryDivider />
                 <SummaryRow
-                  label="Network Fee"
+                  label={SendStrings.confirm.rows.networkFee}
                   value={
                     feeEth !== null
                       ? `~${feeEth.toFixed(6)} ETH`
@@ -569,7 +543,7 @@ export const SendScreen: React.FC = () => {
                 />
                 <SummaryDivider />
                 <SummaryRow
-                  label="Total"
+                  label={SendStrings.confirm.rows.total}
                   value={totalEth !== null ? `${totalEth.toFixed(6)} ETH` : '—'}
                   bold
                   accent
@@ -577,15 +551,18 @@ export const SendScreen: React.FC = () => {
               </View>
 
               <View style={s.warnBox}>
-                <Ionicons name="warning-outline" size={14} color={C.warning} />
+                <Ionicons
+                  name="warning-outline"
+                  size={14}
+                  color={darkPalette.warning}
+                />
                 <Text style={s.warnText}>
-                  Transactions are irreversible. Verify the address before
-                  confirming.
+                  {SendStrings.confirm.securityNote}
                 </Text>
               </View>
 
               <PrimaryButton
-                label="Send Now"
+                label={SendStrings.confirm.sendBtn}
                 iconLeft="send"
                 onPress={handleSend}
                 loading={sending}
@@ -594,26 +571,30 @@ export const SendScreen: React.FC = () => {
             </>
           )}
 
-          {/* ── STEP: SUCCESS ─────────────────────────────────────────── */}
+          {/* STEP: SUCCESS */}
           {step === 'success' && (
             <View style={s.successWrap}>
               <View style={s.successCircle}>
-                <Ionicons name="checkmark-circle" size={72} color={C.success} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={72}
+                  color={darkPalette.success}
+                />
               </View>
-              <Text style={s.successTitle}>Sent!</Text>
-              <Text style={s.successSub}>
-                Your transaction has been broadcast to the network.
-              </Text>
+              <Text style={s.successTitle}>{SendStrings.success.title}</Text>
+              <Text style={s.successSub}>{SendStrings.success.subtitle}</Text>
               {txHash && (
                 <View style={s.hashCard}>
-                  <Text style={s.hashLabel}>Transaction Hash</Text>
+                  <Text style={s.hashLabel}>
+                    {SendStrings.success.txHashLabel}
+                  </Text>
                   <Text style={s.hashValue} selectable>
                     {txHash}
                   </Text>
                 </View>
               )}
               <PrimaryButton
-                label="Done"
+                label={SendStrings.success.doneBtn}
                 iconLeft="checkmark"
                 onPress={() => navigation.navigate('Home')}
               />
@@ -627,90 +608,90 @@ export const SendScreen: React.FC = () => {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: darkPalette.bg },
   flex: { flex: 1 },
-  scroll: { padding: 20, paddingBottom: 48 },
+  scroll: { padding: spacing.md + 4, paddingBottom: 48 },
 
-  // ── Step progress ──────────────────────────────────────────────────────────
   progress: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    borderBottomColor: darkPalette.border,
   },
   progressItem: { alignItems: 'center' },
   dot: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: C.cardAlt,
+    backgroundColor: darkPalette.cardAlt,
     borderWidth: 1.5,
-    borderColor: C.border,
+    borderColor: darkPalette.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dotActive: { borderColor: C.primary, backgroundColor: '#0A84FF18' },
-  dotDone: { backgroundColor: C.primary, borderColor: C.primary },
-  dotNum: { fontSize: 12, color: C.subtle, fontWeight: '600' },
-  dotNumActive: { color: C.primary },
+  dotActive: {
+    borderColor: darkPalette.primary,
+    backgroundColor: darkPalette.primaryFaint,
+  },
+  dotDone: {
+    backgroundColor: darkPalette.primary,
+    borderColor: darkPalette.primary,
+  },
+  dotNum: {
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
+    fontWeight: '600',
+  },
+  dotNumActive: { color: darkPalette.primary },
   dotLabel: {
-    fontSize: 10,
-    color: C.subtle,
+    ...typography.caption,
+    color: darkPalette.subtle,
     marginTop: 4,
     fontWeight: '500',
   },
-  dotLabelActive: { color: C.primary },
+  dotLabelActive: { color: darkPalette.primary },
   connector: {
     flex: 1,
     height: 1.5,
-    backgroundColor: C.border,
+    backgroundColor: darkPalette.border,
     marginBottom: 14,
   },
-  connectorActive: { backgroundColor: C.primary },
+  connectorActive: { backgroundColor: darkPalette.primary },
 
-  // ── Step headings ──────────────────────────────────────────────────────────
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: C.text,
-    marginBottom: 6,
-  },
+  title: { ...typography.h2, color: darkPalette.text, marginBottom: 6 },
   subtitle: {
-    fontSize: 14,
-    color: C.subtle,
-    marginBottom: 20,
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
+    marginBottom: spacing.lg,
     lineHeight: 20,
   },
 
-  // ── Recipient preview (amount step) ───────────────────────────────────────
   recipientPreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: C.card,
-    borderRadius: 10,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.md,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: 16,
+    borderColor: darkPalette.border,
+    marginBottom: spacing.md,
   },
   recipientAddr: {
-    fontSize: 13,
-    color: C.subtle,
-    fontFamily: 'monospace',
-    marginLeft: 8,
+    ...typography.mono,
+    color: darkPalette.subtle,
+    marginLeft: spacing.sm,
   },
 
-  // ── Input card ─────────────────────────────────────────────────────────────
   card: {
-    backgroundColor: C.card,
-    borderRadius: 16,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 16,
+    borderColor: darkPalette.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   rowBetween: {
     flexDirection: 'row',
@@ -719,78 +700,78 @@ const s = StyleSheet.create({
     marginBottom: 10,
   },
   rowEnd: { flexDirection: 'row', alignItems: 'center' },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.subtle,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
+  fieldLabel: { ...typography.overline, color: darkPalette.subtle },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0A84FF14',
-    borderRadius: 8,
+    backgroundColor: darkPalette.primaryFaint,
+    borderRadius: borderRadius.sm + 4,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: '#0A84FF40',
+    borderColor: darkPalette.primaryMid,
   },
   pillScan: { marginLeft: 6 },
   pillText: {
-    fontSize: 12,
+    ...typography.bodySmall,
     fontWeight: '600',
-    color: C.primary,
+    color: darkPalette.primary,
     marginLeft: 4,
   },
   input: {
-    backgroundColor: C.cardAlt,
-    borderRadius: 10,
+    backgroundColor: darkPalette.cardAlt,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: darkPalette.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: C.text,
+    color: darkPalette.text,
     fontSize: 14,
     fontFamily: 'monospace',
     minHeight: 48,
   },
-  inputErr: { borderColor: C.error },
+  inputErr: { borderColor: darkPalette.error },
   amountWrap: { flexDirection: 'row', alignItems: 'center' },
   amountInput: {
     flex: 1,
-    backgroundColor: C.cardAlt,
-    borderRadius: 10,
+    backgroundColor: darkPalette.cardAlt,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: C.border,
+    borderColor: darkPalette.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: C.text,
+    color: darkPalette.text,
     fontSize: 32,
     fontWeight: '600',
     height: 64,
   },
   amountUnit: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: C.subtle,
+    ...typography.numericLG,
+    color: darkPalette.subtle,
     marginLeft: 10,
   },
-  balLoader: { marginTop: 8 },
-  balHint: { fontSize: 12, color: C.subtle, marginTop: 8 },
+  balLoader: { marginTop: spacing.sm },
+  balHint: {
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
+    marginTop: spacing.sm,
+  },
 
-  // ── Validation error ───────────────────────────────────────────────────────
-  errRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  errText: { fontSize: 12, color: C.error, marginLeft: 5, flex: 1 },
+  errRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+  errText: {
+    ...typography.bodySmall,
+    color: darkPalette.error,
+    marginLeft: 5,
+    flex: 1,
+  },
 
-  // ── Confirm summary ────────────────────────────────────────────────────────
   summaryCard: {
-    backgroundColor: C.card,
-    borderRadius: 16,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 16,
+    borderColor: darkPalette.border,
+    padding: spacing.md,
+    marginBottom: spacing.md,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -798,105 +779,108 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 4,
   },
-  summaryLabel: { fontSize: 13, color: C.subtle, flex: 1 },
-  summaryValue: { fontSize: 14, color: C.text, flex: 2, textAlign: 'right' },
+  summaryLabel: { ...typography.bodySmall, color: darkPalette.subtle, flex: 1 },
+  summaryValue: {
+    ...typography.bodyMedium,
+    color: darkPalette.text,
+    flex: 2,
+    textAlign: 'right',
+  },
   summaryMono: { fontFamily: 'monospace', fontSize: 12, lineHeight: 18 },
   summaryBold: { fontWeight: '700' },
-  summaryAccent: { color: C.primary, fontWeight: '700', fontSize: 16 },
-  summaryDivider: { height: 1, backgroundColor: C.border, marginVertical: 8 },
+  summaryAccent: {
+    color: darkPalette.primary,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: darkPalette.border,
+    marginVertical: spacing.sm,
+  },
 
-  // ── Warning ────────────────────────────────────────────────────────────────
   warnBox: {
     flexDirection: 'row',
-    backgroundColor: '#FF9F0A12',
-    borderRadius: 10,
+    backgroundColor: darkPalette.warning + '12',
+    borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: '#FF9F0A40',
+    borderColor: darkPalette.warning + '40',
     padding: 12,
-    marginBottom: 20,
+    marginBottom: spacing.lg,
   },
   warnText: {
-    fontSize: 12,
-    color: C.warning,
-    marginLeft: 8,
+    ...typography.bodySmall,
+    color: darkPalette.warning,
+    marginLeft: spacing.sm,
     flex: 1,
     lineHeight: 18,
   },
 
-  // ── Buttons ────────────────────────────────────────────────────────────────
   primaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.primary,
-    borderRadius: 14,
+    backgroundColor: darkPalette.primary,
+    borderRadius: borderRadius.lg,
     paddingVertical: 16,
     marginBottom: 12,
   },
   primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
-  btnIconLeft: { marginRight: 8 },
-  btnIconRight: { marginLeft: 8 },
+  primaryBtnText: { ...typography.labelLarge, color: darkPalette.text },
+  btnIconLeft: { marginRight: spacing.sm },
+  btnIconRight: { marginLeft: spacing.sm },
   backBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  backText: { fontSize: 15, color: C.subtle, marginLeft: 5 },
+  backText: {
+    ...typography.bodyMedium,
+    color: darkPalette.subtle,
+    marginLeft: 5,
+  },
 
-  // ── Success ────────────────────────────────────────────────────────────────
   successWrap: { alignItems: 'center', paddingTop: 40 },
   successCircle: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#30D15812',
+    backgroundColor: darkPalette.successFaint,
     borderWidth: 1,
-    borderColor: '#30D15840',
+    borderColor: darkPalette.successBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
   successTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: C.text,
-    marginBottom: 8,
+    ...typography.displayLarge,
+    color: darkPalette.text,
+    marginBottom: spacing.sm,
   },
   successSub: {
-    fontSize: 15,
-    color: C.subtle,
-    marginBottom: 32,
+    ...typography.bodyMedium,
+    color: darkPalette.subtle,
+    marginBottom: spacing.xl,
     textAlign: 'center',
-    lineHeight: 22,
   },
   hashCard: {
     width: '100%',
-    backgroundColor: C.card,
-    borderRadius: 14,
+    backgroundColor: darkPalette.card,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    marginBottom: 24,
+    borderColor: darkPalette.border,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
   },
   hashLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: C.subtle,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 8,
+    ...typography.overline,
+    color: darkPalette.subtle,
+    marginBottom: spacing.sm,
   },
-  hashValue: {
-    fontSize: 12,
-    color: C.text,
-    fontFamily: 'monospace',
-    lineHeight: 18,
-  },
+  hashValue: { ...typography.mono, color: darkPalette.text, lineHeight: 18 },
 
-  // ── QR Scanner overlay ────────────────────────────────────────────────────
   scannerOverlay: {
     position: 'absolute',
     top: 0,
@@ -914,7 +898,7 @@ const s = StyleSheet.create({
     position: 'absolute',
     width: 28,
     height: 28,
-    borderColor: C.primary,
+    borderColor: darkPalette.primary,
     borderWidth: 3,
   },
   cTL: {
@@ -950,9 +934,13 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 24,
-    gap: 20,
+    paddingTop: spacing.lg,
+    gap: spacing.lg,
   },
-  scanHint: { color: '#FFFFFF', fontSize: 14, fontWeight: '500' },
+  scanHint: {
+    ...typography.bodyMedium,
+    color: darkPalette.text,
+    fontWeight: '500',
+  },
   scanCloseBtn: { padding: 4 },
 });
