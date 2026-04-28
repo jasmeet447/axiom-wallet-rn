@@ -11,13 +11,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { biometricService } from '../../../core/biometric/biometricService';
-import { useAppDispatch } from '../../../store/hooks';
-import {
-  setAuthenticated,
-  setUnlocked,
-  setUser,
-} from '../../../store/slices/authSlice';
+import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
 import type { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
 
 const DARK = {
@@ -36,60 +30,34 @@ const DARK = {
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'CreateWallet'>;
 
-/** Generates a simple random hex string to simulate a wallet secret.
- *  In production this should come from the WDK / BIP39 mnemonic generator. */
-function generateWalletSecret(): string {
-  const bytes = new Uint8Array(32);
-  for (let i = 0; i < bytes.length; i++) {
-    // NOTE: Math.random is NOT cryptographically secure.
-    // Replace with WDK key-generation before production.
-    bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-/** Splits the hex secret into 12 display "words" (mock — replace with BIP39). */
-function secretToDisplayWords(secret: string): string[] {
-  const chunks: string[] = [];
-  for (let i = 0; i < secret.length; i += 5) {
-    chunks.push(secret.slice(i, i + 5));
-    if (chunks.length === 12) break;
-  }
-  return chunks;
-}
-
 type Step = 'generate' | 'backup' | 'confirm';
 
 export const CreateWalletScreen: React.FC<Props> = ({ navigation }) => {
-  const dispatch = useAppDispatch();
+  const { generateMnemonic, createWallet } = useWdkWallet();
   const [step, setStep] = useState<Step>('generate');
-  const [secret] = useState(() => generateWalletSecret());
-  const [seedWords] = useState(() => secretToDisplayWords(secret));
+  // Generate a real BIP-39 mnemonic once on mount using @scure/bip39
+  const [mnemonic] = useState<string>(() => generateMnemonic());
+  const [seedWords] = useState<string[]>(() => mnemonic.split(' '));
   const [revealed, setRevealed] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use the wallet name "Main Wallet" by default; can be made configurable later
+  const WALLET_ID = 'Main Wallet';
+
   const handleCreate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const stored = await biometricService.setupWallet(secret);
-      if (!stored) {
-        setError('Failed to store credentials. Please try again.');
-        return;
-      }
-      dispatch(setUser({ id: 'wallet', isSetup: true }));
-      dispatch(setAuthenticated(true));
-      dispatch(setUnlocked(true));
+      await createWallet(WALLET_ID);
+      // Navigation is handled by RootNavigator reacting to Redux auth state change
     } catch (e: any) {
       setError(e?.message ?? 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
-  }, [dispatch, secret]);
+  }, [createWallet]);
 
   const renderGenerateStep = () => (
     <View style={styles.stepContainer}>

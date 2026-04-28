@@ -2,67 +2,64 @@ import { useCallback } from 'react';
 
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
-  setAuthenticated,
   setUnlocked,
   setAuthLoading,
   setAuthError,
   clearAuthError,
-  setInitialised,
 } from '../../../store';
-import {
-  biometricService,
-  BiometricResult,
-} from '../../../core/biometric/biometricService';
+import { updateManagedWallet } from '../../../store/slices/walletSlice';
+import { walletStorageService } from '../../../core/api/walletStorageService';
+import { wdkService } from '../../../core/api/wdkService';
 
 /**
- * Handles the two-phase auth lifecycle:
+ * Handles biometric unlock for the currently active wallet.
  *
- * 1. bootstrap()  — called once on app mount; silently checks whether a wallet
- *    exists in the keychain (NO biometric prompt) and initialises redux state.
- *
- * 2. unlock()     — triggers the OS biometric prompt to retrieve the wallet
- *    secret.  Dispatches setUnlocked(true) on success, or surfaces the error
- *    to Redux state for the UI to display.  Returns the raw BiometricResult so
- *    callers can act on the decrypted secret when needed (e.g. wallet init).
+ * unlock() — triggers the OS biometric prompt via the active wallet's
+ * Keychain entry.  On success, the wallet address is populated in Redux
+ * (from the decrypted mnemonic) and isUnlocked is set to true.
  */
 export const useBiometricAuth = () => {
   const dispatch = useAppDispatch();
   const { isInitialised, isAuthenticated, isUnlocked, isLoading, error } =
     useAppSelector(state => state.auth);
+  const { activeWalletId, wallets } = useAppSelector(state => state.wallet);
 
-  const bootstrap = useCallback(async (): Promise<void> => {
-    dispatch(setAuthLoading(true));
-    try {
-      const walletExists = await biometricService.hasStoredWallet();
-      if (walletExists) {
-        dispatch(setAuthenticated(true));
-      }
-    } finally {
-      dispatch(setAuthLoading(false));
-      dispatch(setInitialised(true));
+  const unlock = useCallback(async (): Promise<void> => {
+    if (!activeWalletId) {
+      dispatch(setAuthError('No wallet found. Please create a wallet first.'));
+      return;
     }
-  }, [dispatch]);
 
-  const unlock = useCallback(async (): Promise<BiometricResult> => {
     dispatch(setAuthLoading(true));
     dispatch(clearAuthError());
 
-    const result = await biometricService.retrieveWalletSecret();
+    try {
+      const mnemonic = await walletStorageService.retrieveMnemonic(
+        activeWalletId,
+      );
 
-    dispatch(setAuthLoading(false));
+      if (!mnemonic) {
+        // User cancelled or biometric unavailable — don't surface as an error
+        dispatch(setAuthLoading(false));
+        return;
+      }
 
-    if (result.ok) {
+      // Populate the wallet address from the decrypted mnemonic
+      const address = wdkService.getAddressFromMnemonic(mnemonic);
+      const existing = wallets.find(w => w.id === activeWalletId);
+      if (existing && !existing.address) {
+        dispatch(updateManagedWallet({ id: activeWalletId, address }));
+      }
+
       dispatch(setUnlocked(true));
-    } else if (!result.cancelled) {
-      // Don't surface a "cancelled" state as an error — it's intentional
-      dispatch(setAuthError(result.error));
+    } catch (e: any) {
+      dispatch(setAuthError(e?.message ?? 'Biometric authentication failed.'));
+    } finally {
+      dispatch(setAuthLoading(false));
     }
-
-    return result;
-  }, [dispatch]);
+  }, [dispatch, activeWalletId, wallets]);
 
   return {
-    bootstrap,
     unlock,
     isInitialised,
     isAuthenticated,

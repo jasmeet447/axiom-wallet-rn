@@ -14,13 +14,7 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
-import { biometricService } from '../../../core/biometric/biometricService';
-import { useAppDispatch } from '../../../store/hooks';
-import {
-  setAuthenticated,
-  setUnlocked,
-  setUser,
-} from '../../../store/slices/authSlice';
+import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
 import type { AuthStackParamList } from '../../../app/navigation/AuthNavigator';
 
 const DARK = {
@@ -49,7 +43,7 @@ function normalisePhrase(raw: string): string[] {
 }
 
 export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
-  const dispatch = useAppDispatch();
+  const { importWallet } = useWdkWallet();
   const [phraseInput, setPhraseInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,30 +69,16 @@ export const ImportWalletScreen: React.FC<Props> = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      // Join back to a canonical space-separated phrase before storing
       const canonicalPhrase = words.join(' ');
-
-      // In production: validate each word against the BIP39 wordlist here
-
-      const stored = await biometricService.setupWallet(canonicalPhrase);
-      if (!stored) {
-        setError(
-          'Failed to secure your wallet. Please check biometric settings and try again.',
-        );
-        return;
-      }
+      await importWallet('Imported Wallet', canonicalPhrase);
       setSuccess(true);
-      // Allow a brief success flash before dispatching
-      await new Promise<void>(resolve => setTimeout(resolve, 600));
-      dispatch(setUser({ id: 'wallet', isSetup: true }));
-      dispatch(setAuthenticated(true));
-      dispatch(setUnlocked(true));
+      // Navigation handled by RootNavigator reacting to Redux state change
     } catch (e: any) {
       setError(e?.message ?? 'An unexpected error occurred.');
     } finally {
       setIsLoading(false);
     }
-  }, [canSubmit, words, dispatch]);
+  }, [canSubmit, words, importWallet]);
 
   return (
     <SafeAreaView style={styles.safe}>

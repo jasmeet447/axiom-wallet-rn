@@ -27,9 +27,15 @@ export type {
   NetworkType,
   WalletData,
   WalletState,
+  ManagedWallet,
 } from './slices/walletSlice';
 export { WALLET_INITIAL_STATE } from './slices/walletSlice';
 export {
+  addManagedWallet,
+  removeManagedWallet,
+  setManagedWallets,
+  setActiveWallet,
+  updateManagedWallet,
   setWallet,
   updateBalance,
   updateTokens,

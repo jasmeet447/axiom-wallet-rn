@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -16,7 +16,7 @@ type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-/** Shown while bootstrap() is running — keeps the splash-screen feel. */
+/** Shown while WdkProvider bootstrap is running — keeps the splash-screen feel. */
 const BootSplash: React.FC = () => (
   <View style={splash.container}>
     <ActivityIndicator size="large" color="#0A84FF" />
@@ -33,14 +33,8 @@ const splash = StyleSheet.create({
 });
 
 export const RootNavigator: React.FC = () => {
-  const { bootstrap, isInitialised, isAuthenticated, isUnlocked } =
-    useBiometricAuth();
-
-  // Run once on mount: silently check keychain for an existing wallet
-  useEffect(() => {
-    bootstrap();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // isInitialised is set to true by WdkProvider once the keychain check completes.
+  const { isInitialised, isAuthenticated, isUnlocked } = useBiometricAuth();
 
   if (!isInitialised) {
     return <BootSplash />;
