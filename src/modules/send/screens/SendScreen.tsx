@@ -23,6 +23,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useWdkWallet } from '../../wallet/hooks/useWdkWallet';
 import { blockchainApi } from '../../../core/api/blockchainApi';
+import { wdkService } from '../../../core/api/wdkService';
 import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
 import { SendStrings } from '../../../constants/strings';
 import {
@@ -135,7 +136,7 @@ const SummaryDivider: React.FC = () => <View style={s.summaryDivider} />;
 // ─── SendScreen ───────────────────────────────────────────────────────────────
 export const SendScreen: React.FC = () => {
   const navigation = useNavigation<Nav>();
-  const { activeWallet } = useWdkWallet();
+  const { activeWallet, activeWalletId } = useWdkWallet();
 
   const [step, setStep] = useState<Step>('address');
   const [toAddress, setToAddress] = useState('');
@@ -184,14 +185,24 @@ export const SendScreen: React.FC = () => {
     }
   }, []);
 
+  // Fetch balance + pre-load gas estimate when reaching the amount step
   useEffect(() => {
-    if (step === 'amount' && activeWallet?.address && balance === null) {
-      blockchainApi
-        .getBalance(activeWallet.address)
-        .then(d => setBalance(d.balance))
-        .catch(() => setBalance('0'));
+    if (step === 'amount' && activeWallet?.address) {
+      if (balance === null) {
+        blockchainApi
+          .getBalance(activeWallet.address)
+          .then(d => setBalance(d.balance))
+          .catch(() => setBalance('0'));
+      }
+      // Pre-fetch gas in background so MAX button is accurate
+      if (!gasEstimate && toAddress) {
+        blockchainApi
+          .estimateGas(activeWallet.address, toAddress, '0')
+          .then(est => setGasEstimate(est))
+          .catch(() => {}); // will retry on goToConfirm
+      }
     }
-  }, [step, activeWallet?.address, balance]);
+  }, [step, activeWallet?.address, balance, gasEstimate, toAddress]);
 
   const stepIndex = ORDERED.indexOf(step);
   const feeEth = gasEstimate
@@ -229,6 +240,10 @@ export const SendScreen: React.FC = () => {
       setAmountError(SendStrings.errors.invalidAmount);
       return;
     }
+    if (bal === 0) {
+      setAmountError(SendStrings.errors.zeroBalance);
+      return;
+    }
     if (n > bal) {
       setAmountError(SendStrings.errors.insufficientBalance);
       return;
@@ -249,6 +264,7 @@ export const SendScreen: React.FC = () => {
         return;
       }
     } catch {
+      // Use a conservative fallback if the estimate call fails
       setGasEstimate({ gasPrice: '20', gasLimit: '21000' });
     } finally {
       setFeeLoading(false);
@@ -256,24 +272,47 @@ export const SendScreen: React.FC = () => {
     setStep('confirm');
   }, [amount, balance, toAddress, activeWallet]);
 
+  /**
+   * Sign and send the transaction.
+   *
+   * wdkService.signAndSendTransaction:
+   *   1. Retrieves mnemonic from Keychain → triggers OS biometric prompt.
+   *   2. Derives private key on-device (never transmitted).
+   *   3. Signs the EVM transaction locally.
+   *   4. Broadcasts only the signed bytes.
+   */
   const handleSend = useCallback(async () => {
-    if (!activeWallet?.address) return;
+    if (!activeWallet?.address || !activeWalletId) return;
     setSending(true);
     try {
-      const result = await blockchainApi.sendTransaction(
-        activeWallet.address,
+      const result = await wdkService.signAndSendTransaction(
+        activeWalletId,
         toAddress,
         amount,
-        '',
+        gasEstimate?.gasPrice ?? '20',
+        gasEstimate?.gasLimit ?? '21000',
       );
       setTxHash(result.hash);
       setStep('success');
-    } catch {
-      Alert.alert(SendStrings.txFailedTitle, SendStrings.txFailedMessage);
+    } catch (e: any) {
+      const msg: string = e?.message ?? '';
+      if (/cancel/i.test(msg)) {
+        // User cancelled the biometric prompt — stay on confirm screen
+        Alert.alert(SendStrings.txFailedTitle, SendStrings.txAuthCancelled);
+      } else if (/network|connect|timeout/i.test(msg)) {
+        Alert.alert(SendStrings.txFailedTitle, SendStrings.txNetworkError);
+      } else if (/insufficient|balance/i.test(msg)) {
+        Alert.alert(
+          SendStrings.txFailedTitle,
+          SendStrings.errors.insufficientBalance,
+        );
+      } else {
+        Alert.alert(SendStrings.txFailedTitle, SendStrings.txFailedMessage);
+      }
     } finally {
       setSending(false);
     }
-  }, [activeWallet, toAddress, amount]);
+  }, [activeWallet, activeWalletId, toAddress, amount, gasEstimate]);
 
   const pasteAddress = useCallback(async () => {
     const text = await Clipboard.getString();
@@ -464,7 +503,13 @@ export const SendScreen: React.FC = () => {
                     <TouchableOpacity
                       style={s.pill}
                       onPress={() => {
-                        setAmount(balance);
+                        // MAX = balance minus estimated fee (or a small buffer
+                        // if the estimate hasn't loaded yet)
+                        const fee =
+                          feeEth !== null ? feeEth : calcFeeETH('20', '21000'); // conservative fallback
+                        const bal = parseFloat(balance ?? '0');
+                        const maxSend = Math.max(0, bal - fee);
+                        setAmount(maxSend > 0 ? maxSend.toFixed(6) : '0');
                         setAmountError('');
                       }}
                     >
@@ -479,7 +524,15 @@ export const SendScreen: React.FC = () => {
                     style={[s.amountInput, !!amountError && s.inputErr]}
                     value={amount}
                     onChangeText={t => {
-                      setAmount(t.replace(/[^0-9.]/g, ''));
+                      // Strip non-numeric characters except one decimal point
+                      const stripped = t.replace(/[^0-9.]/g, '');
+                      const firstDot = stripped.indexOf('.');
+                      const safe =
+                        firstDot === -1
+                          ? stripped
+                          : stripped.slice(0, firstDot + 1) +
+                            stripped.slice(firstDot + 1).replace(/\./g, '');
+                      setAmount(safe);
                       setAmountError('');
                     }}
                     placeholder={SendStrings.amount.placeholder}
@@ -498,7 +551,13 @@ export const SendScreen: React.FC = () => {
                   />
                 ) : (
                   <Text style={s.balHint}>
-                    Available: {parseFloat(balance).toFixed(4)} ETH
+                    {SendStrings.amount.availableBalance}{' '}
+                    {parseFloat(balance).toFixed(4)} ETH
+                    {feeEth !== null
+                      ? `  ·  ${
+                          SendStrings.amount.estimatedFee
+                        }${feeEth.toFixed(6)} ETH`
+                      : ''}
                   </Text>
                 )}
                 {!!amountError && <ErrorRow msg={amountError} />}
@@ -558,6 +617,17 @@ export const SendScreen: React.FC = () => {
                 />
                 <Text style={s.warnText}>
                   {SendStrings.confirm.securityNote}
+                </Text>
+              </View>
+
+              <View style={s.biometricNoteBox}>
+                <Ionicons
+                  name="finger-print"
+                  size={14}
+                  color={darkPalette.subtle}
+                />
+                <Text style={s.biometricNoteText}>
+                  {SendStrings.confirm.biometricNote}
                 </Text>
               </View>
 
@@ -806,11 +876,28 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: darkPalette.warning + '40',
     padding: 12,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
   },
   warnText: {
     ...typography.bodySmall,
     color: darkPalette.warning,
+    marginLeft: spacing.sm,
+    flex: 1,
+    lineHeight: 18,
+  },
+  biometricNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: darkPalette.primaryFaint,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: darkPalette.primaryBorder,
+    padding: 10,
+    marginBottom: spacing.lg,
+  },
+  biometricNoteText: {
+    ...typography.bodySmall,
+    color: darkPalette.subtle,
     marginLeft: spacing.sm,
     flex: 1,
     lineHeight: 18,

@@ -41,19 +41,28 @@ export const blockchainApi = {
     return response.data;
   },
 
-  // Send transaction
-  sendTransaction: async (
-    from: string,
-    to: string,
-    value: string,
-    privateKey: string,
-  ): Promise<{ hash: string }> => {
-    const response = await api.post('/transaction/send', {
-      from,
-      to,
-      value,
-      privateKey,
-    });
+  /**
+   * Fetch the current account nonce (transaction count) for `address`.
+   * Required to build a correctly-sequenced EVM transaction.
+   */
+  getNonce: async (address: string): Promise<number> => {
+    const response = await api.get<{ nonce: number }>(
+      `/wallet/${address}/nonce`,
+    );
+    return response.data.nonce;
+  },
+
+  /**
+   * Broadcast a pre-signed raw transaction to the network.
+   *
+   * The private key is NEVER sent — only the signed transaction bytes.
+   * Signing happens on-device in wdkService.signAndSendTransaction.
+   */
+  broadcastRawTx: async (rawTx: string): Promise<{ hash: string }> => {
+    const response = await api.post<{ hash: string }>(
+      '/transaction/broadcast',
+      { rawTx },
+    );
     return response.data;
   },
 

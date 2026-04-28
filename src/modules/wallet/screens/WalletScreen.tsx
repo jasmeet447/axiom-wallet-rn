@@ -55,16 +55,19 @@ export const WalletScreen: React.FC = () => {
 
   const [balance, setBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  const [balanceError, setBalanceError] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchBalance = useCallback(async (address: string) => {
     if (!address) return;
     try {
       setBalanceLoading(true);
+      setBalanceError(false);
       const data = await blockchainApi.getBalance(address);
       setBalance(data.balance);
     } catch {
       setBalance(null);
+      setBalanceError(true);
     } finally {
       setBalanceLoading(false);
     }
@@ -160,6 +163,24 @@ export const WalletScreen: React.FC = () => {
                     {WalletStrings.balance.fetching}
                   </Text>
                 </View>
+              ) : balanceError ? (
+                <TouchableOpacity
+                  style={s.balanceErrorRow}
+                  onPress={() =>
+                    activeWallet?.address && fetchBalance(activeWallet.address)
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={14}
+                    color={darkPalette.error}
+                    style={s.balanceErrorIcon}
+                  />
+                  <Text style={s.balanceErrorText}>
+                    {WalletStrings.balance.fetchError}
+                  </Text>
+                </TouchableOpacity>
               ) : (
                 <Text style={s.balanceValue}>
                   {formatETHBalance(balance)}
@@ -360,6 +381,16 @@ const s = StyleSheet.create({
     marginTop: spacing.xs,
   },
   balanceLoadingText: { ...typography.bodyLarge, color: darkPalette.subtle },
+  balanceErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.xs,
+  },
+  balanceErrorIcon: { marginRight: 5 },
+  balanceErrorText: {
+    ...typography.bodySmall,
+    color: darkPalette.error,
+  },
 
   emptyCard: {
     backgroundColor: darkPalette.card,

@@ -1,14 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Storage keys
+// Storage keys — AsyncStorage is NOT encrypted; only store non-sensitive
+// preferences here.  Secrets (mnemonic, private key, PIN, auth tokens) must
+// be stored exclusively in the system Keychain via walletStorageService or
+// biometricService — never added to this object.
 export const STORAGE_KEYS = {
   USER_DATA: '@user_data',
-  WALLET_ADDRESS: '@wallet_address',
-  AUTH_TOKEN: '@auth_token',
   BIOMETRIC_ENABLED: '@biometric_enabled',
-  PIN_CODE: '@pin_code',
   NETWORK: '@network',
-  SEED_PHRASE: '@seed_phrase', // Should be encrypted
 } as const;
 
 export const storage = {

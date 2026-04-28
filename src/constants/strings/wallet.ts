@@ -11,6 +11,7 @@ export const WalletStrings = {
     fetching: 'Fetching…',
     noAddress: 'No address',
     noWalletSelected: 'No wallet selected',
+    fetchError: 'Failed to load balance. Tap to retry.',
   },
 
   // Active pill

@@ -32,6 +32,8 @@ export const SendStrings = {
     placeholder: '0.00',
     maxBtn: 'Max',
     continueBtn: 'Review',
+    availableBalance: 'Available:',
+    estimatedFee: 'Est. fee: ~',
   },
 
   // Step: Confirm
@@ -44,8 +46,10 @@ export const SendStrings = {
       networkFee: 'Network Fee',
       total: 'Total',
     },
-    sendBtn: 'Send',
+    sendBtn: 'Confirm & Send',
     securityNote: 'This transaction cannot be reversed once confirmed.',
+    biometricNote:
+      'You will be prompted to authenticate with biometrics before the transaction is broadcast.',
   },
 
   // Step: Success
@@ -61,13 +65,16 @@ export const SendStrings = {
     invalidAddress: 'Enter a valid Ethereum address starting with 0x.',
     ownAddress: "You can't send to your own wallet address.",
     invalidAmount: 'Enter a valid amount greater than 0.',
-    insufficientBalance: 'Insufficient balance.',
+    insufficientBalance: 'Insufficient balance for this amount.',
     exceedsBalanceWithFee:
       'Amount + network fee exceeds your available balance.',
+    zeroBalance: 'Your balance is too low to send a transaction.',
   },
 
   // Transaction failed alert
   txFailedTitle: 'Transaction Failed',
   txFailedMessage:
     'Could not broadcast the transaction. Check your connection and try again.',
+  txNetworkError: 'Network error — please check your connection and try again.',
+  txAuthCancelled: 'Authentication cancelled. Please try again to send funds.',
 } as const;

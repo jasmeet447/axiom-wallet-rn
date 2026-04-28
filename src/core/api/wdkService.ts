@@ -23,11 +23,19 @@ import { HDKey } from '@scure/bip32';
 import { secp256k1 } from '@noble/curves/secp256k1.js';
 import { keccak_256 } from '@noble/hashes/sha3';
 import { walletStorageService } from './walletStorageService';
+import { blockchainApi } from './blockchainApi';
+import { signEvmTransaction } from '../utils/evmSigner';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** EVM derivation path (account #0 by default, BIP-44 for Ethereum). */
 const EVM_DERIVATION_PATH = "m/44'/60'/0'/0/0";
+
+/**
+ * EIP-155 chain ID used for transaction signing.
+ * 1 = Ethereum mainnet.  Change to 11155111n for Sepolia testnet.
+ */
+const DEFAULT_CHAIN_ID = 1n;
 
 export type WalletNetwork = 'ethereum';
 
@@ -211,5 +219,83 @@ export const wdkService = {
     const mnemonic = await walletStorageService.retrieveMnemonic(walletId);
     if (!mnemonic) return null;
     return deriveEvmAddress(mnemonic);
+  },
+
+  /**
+   * Sign and broadcast an ETH transfer entirely on-device.
+   *
+   * Flow:
+   *   1. Retrieve mnemonic from Keychain (triggers the OS biometric prompt).
+   *   2. Derive the secp256k1 private key from the HD path.
+   *   3. Fetch the account nonce from the backend.
+   *   4. Build and sign the EIP-155 transaction locally — the private key
+   *      never leaves the device.
+   *   5. Zero the in-memory private key copy.
+   *   6. Broadcast the signed hex to the network via the backend relay.
+   *
+   * @throws If biometric auth is cancelled, mnemonic is missing, signing
+   *         fails, or the network call fails.
+   */
+  async signAndSendTransaction(
+    walletId: string,
+    to: string,
+    amountEth: string,
+    gasPriceGwei: string,
+    gasLimitStr: string,
+    chainId: bigint = DEFAULT_CHAIN_ID,
+  ): Promise<{ hash: string }> {
+    // 1. Biometric gate — retrieve mnemonic from Keychain
+    const mnemonic = await walletStorageService.retrieveMnemonic(walletId);
+    if (!mnemonic) {
+      throw new Error('Authentication cancelled or wallet not found.');
+    }
+
+    // 2. Derive private key on-device
+    const seed = bip39.mnemonicToSeedSync(mnemonic);
+    const root = HDKey.fromMasterSeed(seed);
+    const child = root.derive(EVM_DERIVATION_PATH);
+
+    if (!child.privateKey) {
+      throw new Error('Failed to derive private key from mnemonic.');
+    }
+
+    // Copy to a writable buffer so we can zero it once done
+    const privKey = new Uint8Array(child.privateKey);
+
+    try {
+      // 3. Derive sender address (needed for nonce fetch)
+      const address = deriveEvmAddress(mnemonic);
+
+      // 4. Fetch account nonce
+      const nonce = await blockchainApi.getNonce(address);
+
+      // 5. Convert human-readable units → Wei / minimal units
+      const amountFloat = parseFloat(amountEth);
+      if (isNaN(amountFloat) || amountFloat <= 0) {
+        throw new Error('Invalid amount.');
+      }
+      const valueWei = BigInt(Math.round(amountFloat * 1e18));
+      const gasPriceWei = BigInt(Math.round(parseFloat(gasPriceGwei) * 1e9));
+      const gasLimit = BigInt(Math.round(parseFloat(gasLimitStr)));
+
+      // 6. Sign transaction locally — private key stays on device
+      const rawTx = signEvmTransaction(
+        {
+          nonce: BigInt(nonce),
+          gasPriceWei,
+          gasLimit,
+          to,
+          valueWei,
+          chainId,
+        },
+        privKey,
+      );
+
+      // 7. Broadcast only the signed bytes — private key is NOT sent
+      return await blockchainApi.broadcastRawTx(rawTx);
+    } finally {
+      // 8. Always zero the private key copy regardless of success/failure
+      privKey.fill(0);
+    }
   },
 };
