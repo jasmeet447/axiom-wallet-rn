@@ -15,6 +15,8 @@ export type AuthError = string | null;
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  /** True once the user has passed the biometric check this session */
+  isUnlocked: boolean;
   isLoading: boolean;
   error: AuthError;
   /** Whether the user has enabled biometric unlock */
@@ -26,6 +28,7 @@ export interface AuthState {
 export const AUTH_INITIAL_STATE: AuthState = {
   user: null,
   isAuthenticated: false,
+  isUnlocked: false,
   isLoading: false,
   error: null,
   biometricEnabled: false,
@@ -43,9 +46,18 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.error = null;
     },
+    /** Mark wallet as set up (credentials exist in keychain) without a User object */
+    setAuthenticated(state, action: PayloadAction<boolean>) {
+      state.isAuthenticated = action.payload;
+    },
+    /** Set after a successful biometric check this session */
+    setUnlocked(state, action: PayloadAction<boolean>) {
+      state.isUnlocked = action.payload;
+    },
     clearUser(state) {
       state.user = null;
       state.isAuthenticated = false;
+      state.isUnlocked = false;
     },
     setLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
@@ -72,6 +84,8 @@ const authSlice = createSlice({
 
 export const {
   setUser,
+  setAuthenticated,
+  setUnlocked,
   clearUser,
   setLoading,
   setError,

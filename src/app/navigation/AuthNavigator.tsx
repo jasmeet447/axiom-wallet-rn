@@ -1,11 +1,13 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
 import { SetupScreen } from '../../modules/auth/screens/SetupScreen';
+import { CreateWalletScreen } from '../../modules/auth/screens/CreateWalletScreen';
+import { ImportWalletScreen } from '../../modules/auth/screens/ImportWalletScreen';
 
 export type AuthStackParamList = {
-  Login: undefined;
   Setup: undefined;
+  CreateWallet: undefined;
+  ImportWallet: undefined;
 };
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
@@ -13,14 +15,16 @@ const Stack = createNativeStackNavigator<AuthStackParamList>();
 export const AuthNavigator: React.FC = () => {
   return (
     <Stack.Navigator
-      initialRouteName="Login"
+      initialRouteName="Setup"
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
+        contentStyle: { backgroundColor: '#000000' },
       }}
     >
-      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Setup" component={SetupScreen} />
+      <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
+      <Stack.Screen name="ImportWallet" component={ImportWalletScreen} />
     </Stack.Navigator>
   );
 };

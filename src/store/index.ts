@@ -10,6 +10,8 @@ export type { User, AuthState, AuthError } from './slices/authSlice';
 export { AUTH_INITIAL_STATE } from './slices/authSlice';
 export {
   setUser,
+  setAuthenticated,
+  setUnlocked,
   clearUser,
   setLoading as setAuthLoading,
   setError as setAuthError,
