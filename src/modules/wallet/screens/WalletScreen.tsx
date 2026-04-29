@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,8 +14,8 @@ import {
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useBalance } from '@tetherto/wdk-react-native-core';
 import { useWdkWallet } from '../hooks/useWdkWallet';
-import { blockchainApi } from '../../../core/api/blockchainApi';
 import { darkPalette, spacing, borderRadius, typography } from '../../../theme';
 import { WalletStrings } from '../../../constants/strings';
 import {
@@ -23,6 +23,7 @@ import {
   formatETHBalance,
 } from '../../../core/utils/formatters';
 import { WalletCardSkeleton } from '../../../shared/components';
+import { ETH_ASSET } from '../../../core/config/wdkConfig';
 import type { MainTabParamList } from '../../../app/navigation/MainNavigator';
 
 type Nav = BottomTabNavigationProp<MainTabParamList, 'Home'>;
@@ -53,40 +54,22 @@ export const WalletScreen: React.FC = () => {
   const { wallets, activeWallet, activeWalletId, switchWallet } =
     useWdkWallet();
 
-  const [balance, setBalance] = useState<string | null>(null);
-  const [balanceLoading, setBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError] = useState(false);
+  const {
+    data: balanceData,
+    isLoading: balanceLoading,
+    isError: balanceError,
+    refetch: refetchBalance,
+  } = useBalance(0, ETH_ASSET);
+
+  const balance = (balanceData?.success ? balanceData.balance : null) ?? null;
+
   const [refreshing, setRefreshing] = useState(false);
-
-  const fetchBalance = useCallback(async (address: string) => {
-    if (!address) return;
-    try {
-      setBalanceLoading(true);
-      setBalanceError(false);
-      const data = await blockchainApi.getBalance(address);
-      setBalance(data.balance);
-    } catch {
-      setBalance(null);
-      setBalanceError(true);
-    } finally {
-      setBalanceLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    setBalance(null);
-    if (activeWallet?.address) {
-      fetchBalance(activeWallet.address);
-    }
-  }, [activeWallet?.address, fetchBalance]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    if (activeWallet?.address) {
-      await fetchBalance(activeWallet.address);
-    }
+    await refetchBalance();
     setRefreshing(false);
-  }, [activeWallet?.address, fetchBalance]);
+  }, [refetchBalance]);
 
   const shareAddress = useCallback(() => {
     if (!activeWallet?.address) return;
@@ -166,9 +149,7 @@ export const WalletScreen: React.FC = () => {
               ) : balanceError ? (
                 <TouchableOpacity
                   style={s.balanceErrorRow}
-                  onPress={() =>
-                    activeWallet?.address && fetchBalance(activeWallet.address)
-                  }
+                  onPress={() => refetchBalance()}
                   activeOpacity={0.7}
                 >
                   <Ionicons
@@ -219,12 +200,12 @@ export const WalletScreen: React.FC = () => {
               label={WalletStrings.actions.receive}
               onPress={() => navigation.navigate('Receive')}
             />
-            <View style={s.actionDivider} />
+            {/* <View style={s.actionDivider} />
             <ActionButton
               icon="time-outline"
               label={WalletStrings.actions.history}
               onPress={() => navigation.navigate('Transactions')}
-            />
+            /> */}
           </View>
         )}
 

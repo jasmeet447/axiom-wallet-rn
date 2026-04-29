@@ -80,13 +80,13 @@ export const MainNavigator: React.FC = () => (
           marginTop: 2,
         },
         // Smooth cross-fade when switching tabs
-        animation: 'fade',
+        // animation: 'fade',
       };
     }}
   >
     <Tab.Screen name="Home" component={WalletScreen} />
     <Tab.Screen name="Send" component={SendScreen} />
     <Tab.Screen name="Receive" component={ReceiveScreen} />
-    <Tab.Screen name="Transactions" component={TransactionsScreen} />
+    {/* <Tab.Screen name="Transactions" component={TransactionsScreen} /> */}
   </Tab.Navigator>
 );

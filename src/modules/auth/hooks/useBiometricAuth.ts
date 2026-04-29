@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useWalletManager } from '@tetherto/wdk-react-native-core';
 
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
@@ -23,6 +24,8 @@ export const useBiometricAuth = () => {
   const { isInitialised, isAuthenticated, isUnlocked, isLoading, error } =
     useAppSelector(state => state.auth);
   const { activeWalletId, wallets } = useAppSelector(state => state.wallet);
+  const { restoreWallet: wdkRestoreWallet, unlock: wdkUnlock } =
+    useWalletManager();
 
   const unlock = useCallback(async (): Promise<void> => {
     if (!activeWalletId) {
@@ -51,13 +54,27 @@ export const useBiometricAuth = () => {
         dispatch(updateManagedWallet({ id: activeWalletId, address }));
       }
 
+      // WDK identifiers only allow alphanumeric, dots, dashes, underscores,
+      // plus signs, and email format — replace any other characters with '_'.
+      const wdkId = activeWalletId.replace(/[^a-zA-Z0-9._\-+@]/g, '_');
+
+      // Initialize the WDK worklet so useBalance can fetch the balance.
+      // On first unlock the wallet isn't in WDK storage yet → restoreWallet.
+      // On subsequent unlocks it already exists → unlock directly.
+      try {
+        await wdkRestoreWallet(mnemonic, wdkId);
+      } catch {
+        // Wallet already exists in WDK storage — just unlock it.
+        await wdkUnlock(wdkId);
+      }
+
       dispatch(setUnlocked(true));
     } catch (e: any) {
       dispatch(setAuthError(e?.message ?? 'Biometric authentication failed.'));
     } finally {
       dispatch(setAuthLoading(false));
     }
-  }, [dispatch, activeWalletId, wallets]);
+  }, [dispatch, activeWalletId, wallets, wdkRestoreWallet, wdkUnlock]);
 
   return {
     unlock,

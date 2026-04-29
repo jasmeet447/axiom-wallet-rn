@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@noble/curves": "^2.2.0",
@@ -18,10 +19,18 @@
     "@react-navigation/native-stack": "7.14.12",
     "@reduxjs/toolkit": "2.11.2",
     "@scure/bip32": "^2.2.0",
-    "@tetherto/wdk-react-native-core": "1.0.0-beta.8",
+    "@tanstack/react-query": "^5.100.6",
+    "@tetherto/wdk": "^1.0.0-beta.9",
+    "@tetherto/wdk-react-native-core": "1.0.0-beta.9",
+    "@tetherto/wdk-react-native-secure-storage": "1.0.0-beta.2",
+    "@tetherto/wdk-wallet-evm-erc-4337": "^1.0.0-beta.6",
     "axios": "^1.15.2",
+    "bare-pack": "^2.0.1",
+    "bufferutil": "^4.1.0",
+    "patch-package": "^8.0.1",
     "react": "19.2.3",
     "react-native": "0.85.2",
+    "react-native-bare-kit": "0.13.3",
     "react-native-gesture-handler": "2.31.1",
     "react-native-get-random-values": "^2.0.0",
     "react-native-keychain": "10.0.0",
@@ -30,12 +39,13 @@
     "react-native-safe-area-context": "5.5.2",
     "react-native-screens": "4.24.0",
     "react-native-svg": "15.15.4",
+    "react-native-svg-transformer": "1.5.0",
     "react-native-vector-icons": "10.3.0",
     "react-native-vision-camera": "4.7.3",
     "react-native-worklets": "0.8.1",
     "react-native-worklets-core": "1.6.3",
     "react-redux": "9.2.0",
-    "react-native-svg-transformer": "1.5.0"
+    "utf-8-validate": "^5.0.10"
   },
   "devDependencies": {
     "@babel/core": "7.25.2",
