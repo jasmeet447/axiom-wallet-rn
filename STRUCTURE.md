@@ -1,236 +1,165 @@
-# AxiomWallet - Folder Structure Documentation
+# AxiomWallet — Folder Structure
 
 ## Overview
 
-This document describes the scalable feature-based folder structure for the AxiomWallet React Native application.
+Feature-based module architecture. Each domain (auth, wallet, send, receive, transactions) is self-contained with its own screens, hooks, and types. Shared UI primitives live in `src/shared/components`. Core services and cryptographic utilities live in `src/core`, completely separate from the UI.
 
-**Note**: This project uses **direct imports** - all imports point directly to source files without barrel exports (index.ts files).
+Both **direct imports** (to specific source files) and **barrel imports** (via `index.ts`) are supported. The `store/`, `theme/`, `shared/components`, and `constants/strings` folders expose barrel exports for convenience.
+
+---
 
 ## Folder Structure
 
 ```
 src/
-├── app/                      # Application configuration
-│   ├── App.tsx              # Main App component with providers
-│   ├── navigation/          # Navigation configuration
-│   │   ├── RootNavigator.tsx    # Root navigation logic
-│   │   ├── AuthNavigator.tsx    # Authentication navigation
-│   │   └── MainNavigator.tsx    # Main app navigation
-│   └── providers/           # App-level context providers
-│       └── AppProviders.tsx
 │
-├── store/                   # Redux store configuration
-│   ├── store.ts            # Store configuration
-│   ├── hooks.ts            # Typed Redux hooks
-│   └── slices/             # Redux Toolkit slices
-│       ├── authSlice.ts        # Authentication state
-│       ├── walletSlice.ts      # Wallet state
-│       └── transactionsSlice.ts # Transactions state
+├── app/                              # Application entry, navigation, and startup
+│   ├── App.tsx                       # Root component (wraps providers + navigator)
+│   ├── navigation/
+│   │   ├── RootNavigator.tsx         # Auth gate: routes between Auth/Main stacks
+│   │   ├── AuthNavigator.tsx         # Onboarding stack (Setup → Create / Import)
+│   │   └── MainNavigator.tsx         # Bottom-tab navigator (Home, Send, Receive, History)
+│   └── providers/
+│       ├── AppProviders.tsx          # Composes all providers; mounts useAppLock
+│       └── WdkProvider.tsx           # Bootstrap: reads Keychain registry → populates Redux
 │
-├── core/                    # Core utilities and services
-│   ├── api/                # API clients
-│   │   ├── apiClient.ts        # Base API client (Axios)
-│   │   └── blockchainApi.ts    # Blockchain-specific API
-│   ├── storage/            # Local storage utilities
-│   │   └── storage.ts          # AsyncStorage wrapper
-│   ├── biometric/          # Biometric authentication
-│   │   └── biometricService.ts # Keychain/biometric service
-│   └── utils/              # Utility functions
-│       ├── helpers.ts          # General helpers
-│       └── errors.ts           # Error handling
+├── constants/
+│   └── strings/                      # All UI copy organised by feature
+│       ├── auth.ts
+│       ├── common.ts
+│       ├── receive.ts
+│       ├── send.ts
+│       ├── transactions.ts
+│       ├── wallet.ts
+│       └── index.ts                  # Barrel re-export
 │
-├── modules/                # Feature modules
-│   ├── auth/              # Authentication module
-│   │   ├── screens/
-│   │   │   ├── LoginScreen.tsx
-│   │   │   └── SetupScreen.tsx
-│   │   ├── components/    # Auth-specific components
-│   │   └── hooks/
-│   │       └── useAuth.ts
-│   │
-│   ├── wallet/            # Wallet module
-│   │   ├── screens/
-│   │   │   └── WalletScreen.tsx
-│   │   ├── components/    # Wallet-specific components
-│   │   └── hooks/
-│   │       └── useWallet.ts
-│   │
-│   ├── send/              # Send transaction module
-│   │   ├── screens/
-│   │   │   └── SendScreen.tsx
-│   │   ├── components/    # Send-specific components
-│   │   └── hooks/
-│   │
-│   ├── receive/           # Receive transaction module
-│   │   ├── screens/
-│   │   │   └── ReceiveScreen.tsx
-│   │   ├── components/    # Receive-specific components
-│   │   └── hooks/
-│   │
-│   └── transactions/      # Transaction history module
-│       ├── screens/
-│       │   └── TransactionsScreen.tsx
-│       ├── components/    # Transaction-specific components
-│       └── hooks/
-│           └── useTransactions.ts
+├── core/                             # Secure engine room — no UI lives here
+│   ├── api/
+│   │   ├── apiClient.ts              # Axios instance + request/response interceptors
+│   │   ├── blockchainApi.ts          # Balance, nonce, gas estimation, broadcastRawTx
+│   │   ├── walletStorageService.ts   # Per-wallet Keychain CRUD (biometric-protected)
+│   │   └── wdkService.ts             # Wallet lifecycle: create, import, sign & send
+│   ├── biometric/
+│   │   └── biometricService.ts       # Device biometric check + legacy credential helpers
+│   ├── config/
+│   │   ├── wdkConfig.ts              # WDK network config (chain ID, RPC, bundler URL)
+│   │   └── wdkBundle.ts              # WDK worklet bundle reference (placeholder)
+│   ├── storage/
+│   │   └── storage.ts                # AsyncStorage wrapper for non-sensitive preferences
+│   └── utils/
+│       ├── evmSigner.ts              # On-device EIP-155 tx signer (RLP + secp256k1)
+│       ├── formatters.ts             # truncateAddress, formatETHBalance, calcFeeETH, …
+│       ├── helpers.ts                # General-purpose utility functions
+│       └── errors.ts                 # Typed AppError class + error handler
 │
-├── shared/                # Shared/reusable components
-│   └── components/
+├── modules/                          # One folder per product feature
+│   ├── auth/
+│   │   ├── hooks/
+│   │   │   ├── useAuth.ts            # Login / logout (wipes Keychain + Redux)
+│   │   │   ├── useBiometricAuth.ts   # Biometric unlock → derive address → populate Redux
+│   │   │   └── useAppLock.ts         # AppState watcher — re-locks after 30 s background
+│   │   └── screens/
+│   │       ├── SetupScreen.tsx       # First-launch choice: Create or Import
+│   │       ├── LoginScreen.tsx       # Auth entry point
+│   │       ├── CreateWalletScreen.tsx # 3-step: generate → backup → confirm
+│   │       ├── ImportWalletScreen.tsx # Seed-phrase import + validation
+│   │       └── UnlockScreen.tsx      # Biometric unlock for returning users
+│   │
+│   ├── wallet/
+│   │   ├── hooks/
+│   │   │   ├── useWdkWallet.ts       # Central wallet lifecycle hook (create/import/send)
+│   │   │   └── useWallet.ts          # Balance & transaction fetch hook
+│   │   └── screens/
+│   │       └── WalletScreen.tsx      # Dashboard: balance, actions, activity summary
+│   │
+│   ├── send/
+│   │   └── screens/
+│   │       └── SendScreen.tsx        # 3-step send flow: Address → Amount → Confirm
+│   │
+│   ├── receive/
+│   │   └── screens/
+│   │       └── ReceiveScreen.tsx     # QR code display + copy-address
+│   │
+│   └── transactions/
+│       ├── hooks/
+│       │   └── useTransactions.ts    # Paginated transaction history fetch
+│       └── screens/
+│           └── TransactionsScreen.tsx
+│
+├── shared/
+│   └── components/                   # Reusable UI primitives
+│       ├── AppIconCircle.tsx
 │       ├── Button.tsx
+│       ├── Card.tsx
+│       ├── ErrorBanner.tsx
+│       ├── ErrorView.tsx
 │       ├── Input.tsx
 │       ├── Loading.tsx
-│       ├── ErrorView.tsx
-│       └── Card.tsx
+│       ├── ScreenHeader.tsx
+│       ├── SkeletonLoader.tsx        # WalletCardSkeleton + TransactionListSkeleton
+│       └── index.ts                  # Barrel re-export
 │
-└── theme/                 # Theme and styling
-    ├── colors.ts          # Color palette + theme object
-    └── spacing.ts         # Spacing, typography, shadows
-
+├── shims/
+│   └── expo-local-authentication.js  # Expo biometric API shim for native compatibility
+│
+├── store/
+│   ├── store.ts                      # Redux store configuration (RTK configureStore)
+│   ├── hooks.ts                      # useAppDispatch / useAppSelector / useAppStore
+│   ├── index.ts                      # Barrel re-export: all actions, types, hooks
+│   └── slices/
+│       ├── authSlice.ts              # isAuthenticated, isUnlocked, isInitialised, biometricEnabled
+│       ├── walletSlice.ts            # wallets[], activeWalletId, balance, tokens
+│       └── transactionsSlice.ts      # transactions[], page, hasMore, loading, error
+│
+├── theme/
+│   ├── colors.ts                     # darkPalette + theme object (single colour source of truth)
+│   ├── typography.ts                 # Text-style tokens: h1–h3, body, mono, …
+│   ├── spacing.ts                    # Spacing scale, borderRadius, fontSize, fontWeight, shadows
+│   └── index.ts                      # Barrel re-export
+│
+└── globals.d.ts                      # Global TypeScript ambient declarations
 ```
+
+---
 
 ## Architecture Principles
 
 ### 1. Feature-Based Modules
 
-Each feature (auth, wallet, send, receive, transactions) is self-contained with:
+Each feature (`auth`, `wallet`, `send`, `receive`, `transactions`) is self-contained with its own screens, hooks, and types. A developer working on Send cannot accidentally break Transactions.
 
-- **screens/**: Feature-specific screen components
-- **components/**: Feature-specific reusable components
-- **hooks/**: Feature-specific custom hooks
+### 2. Core vs. Modules
 
-### 2. Centralized State Management
+`src/core/` contains infrastructure (API clients, storage, crypto utilities). **No UI renders inside `core/`**. Modules import from `core/` but `core/` never imports from `modules/`.
 
-- Redux Toolkit for global state
-- Organized by domain (auth, wallet, transactions)
-- Typed hooks for type safety
+### 3. Secrets Never Touch Redux
 
-### 3. Core Services Layer
+Redux holds only display-safe metadata (wallet name, address, balance string). Mnemonics and private keys are created, used, and discarded inside `core/api/wdkService.ts`. They never pass through Redux slices or AsyncStorage.
 
-Shared services used across features:
+### 4. Barrel Exports
 
-- **api/**: API communication (Axios-based)
-- **storage/**: Local data persistence (AsyncStorage)
-- **biometric/**: Biometric authentication (Keychain)
-- **utils/**: Helper functions and error handling
+The following directories expose an `index.ts` barrel for import convenience:
 
-### 4. Shared Components
+| Directory | Barrel exports |
+|---|---|
+| `src/store/` | Store, typed hooks, all slice actions + types |
+| `src/theme/` | colors, typography, spacing tokens |
+| `src/shared/components/` | All shared UI components |
+| `src/constants/strings/` | All UI string constants |
 
-Reusable UI components used across multiple features:
+Direct-to-file imports are always valid and may be preferred for clarity.
 
-- Button, Input, Loading, ErrorView, Card
-
-### 5. Theme System
-
-Centralized design tokens:
-
-- Colors (light/dark mode support)
-- Spacing, typography, shadows
-- Easy to maintain and update
-
-## Key Technologies
-
-- **React Native** 0.85.2
-- **Redux Toolkit** 2.11.2 - State management
-- **React Navigation** 7.x - Navigation
-- **React Native Keychain** 10.0.0 - Biometric & secure storage
-- **Axios** - API client
-- **AsyncStorage** - Local storage (needs installation)
-- **Tether WDK** - Wallet development kit
-
-## Getting Started
-
-### Install Missing Dependencies
-
-```bash
-npm install @react-native-async-storage/async-storage
-```
-
-### Run the App
-
-```bash
-# iOS
-npm run ios
-
-# Android
-npm run android
-```
-
-## Module Guidelines
-
-### Creating a New Module
-
-1. Create the module folder structure:
+### 5. Dependency Direction
 
 ```
-src/modules/new-feature/
-├── screens/
-├── components/
-└── hooks/
+modules/**/screens
+    ↓
+modules/**/hooks
+    ↓
+core/api  ·  core/utils  ·  core/biometric  ·  core/storage
+    ↓
+Infrastructure: react-native-keychain, @scure/bip39, @scure/bip32,
+                @noble/curves, @noble/hashes, axios
 ```
 
-2. Add necessary Redux slice in `src/store/slices/`
-
-3. Update navigation in `src/app/navigation/`
-
-### Adding Shared Components
-
-Place reusable components in `src/shared/components/` as individual files. Import them directly by file name.
-
-### Using Core Services
-
-Import directly from core module files:
-
-```typescript
-import { api, apiClient } from '../../../core/api/apiClient';
-import { blockchainApi } from '../../../core/api/blockchainApi';
-import { storage, STORAGE_KEYS } from '../../../core/storage/storage';
-import { biometricService } from '../../../core/biometric/biometricService';
-```
-
-### Import Examples
-
-```typescript
-// Navigation
-import { RootNavigator } from './navigation/RootNavigator';
-import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
-
-// Hooks
-import { useAuth } from '../../modules/auth/hooks/useAuth';
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-
-// Components
-import { Button } from '../../../shared/components/Button';
-import { Input } from '../../../shared/components/Input';
-
-// Theme
-import { theme, colors } from '../../../theme/colors';
-import { spacing, fontSize } from '../../../theme/spacing';
-
-// Utils
-import { formatAddress, formatBalance } from '../../../core/utils/helpers';
-import { ERROR_MESSAGES, handleError } from '../../../core/utils/errors';
-```
-
-## Best Practices
-
-1. **Direct Imports**: Always import directly from source files
-2. **Type Safety**: Leverage TypeScript for all components and functions
-3. **Component Composition**: Break down complex screens into smaller components
-4. **State Management**: Use Redux for global state, local state for UI-only state
-5. **Error Handling**: Use the error utilities from `core/utils/errors.ts`
-6. **Styling**: Use theme constants for consistent design
-7. **Explicit Dependencies**: Keep imports explicit for better IDE support and refactoring
-
-## Next Steps
-
-1. Install AsyncStorage dependency
-2. Implement feature screens (currently placeholders)
-3. Add feature-specific components
-4. Integrate Tether WDK for blockchain functionality
-5. Add tests for core utilities and Redux slices
-6. Implement error boundaries
-7. Add proper TypeScript types throughout
-
----
-
-**Note**: This structure is designed to scale as the application grows. Each module is independent and can be developed, tested, and maintained separately.
+Each layer only imports from the layer directly below it.

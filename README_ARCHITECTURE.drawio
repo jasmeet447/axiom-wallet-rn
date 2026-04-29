@@ -1,4 +1,4 @@
-<mxfile host="app.diagrams.net" modified="2026-04-29T00:00:00.000Z" agent="Axiom Wallet" version="21.0.0" type="device">
+<mxfile host="app.diagrams.net" modified="2026-04-30T00:00:00.000Z" agent="Axiom Wallet" version="21.0.0" type="device">
   <diagram name="Axiom Wallet Architecture" id="axiom-wallet-arch">
     <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
       <root>
@@ -97,6 +97,9 @@
         <mxCell id="wallet" value="WalletScreen&#xa;(Dashboard)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1c3b1c;strokeColor=#88CC88;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="710" y="230" width="130" height="40" as="geometry" />
         </mxCell>
+        <mxCell id="login" value="LoginScreen" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1c3b1c;strokeColor=#55AA55;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="655" y="285" width="120" height="40" as="geometry" />
+        </mxCell>
         <mxCell id="send" value="SendScreen&#xa;(3-step flow)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1c3b1c;strokeColor=#88CC88;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="860" y="230" width="130" height="40" as="geometry" />
         </mxCell>
@@ -139,6 +142,9 @@
         <mxCell id="h-wdk" value="useWdkWallet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d5e;strokeColor=#6666CC;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="600" y="405" width="130" height="40" as="geometry" />
         </mxCell>
+        <mxCell id="h-wallet" value="useWallet" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2d2d5e;strokeColor=#6666CC;fontColor=#FFFFFF;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="755" y="405" width="120" height="40" as="geometry" />
+        </mxCell>
 
         <!-- screen → hook edges -->
         <mxCell id="e-unlock-bio" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6666CC;fontSize=9;" edge="1" source="unlock" target="h-bio" parent="1">
@@ -148,6 +154,9 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e-send-wdk" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6666CC;fontSize=9;" edge="1" source="send" target="h-wdk" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-wallet-hwallet" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#6666CC;fontSize=9;" edge="1" source="wallet" target="h-wallet" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -215,6 +224,9 @@
         </mxCell>
         <mxCell id="formatters" value="formatters.ts&#xa;truncateAddress&#xa;formatETHBalance · calcFeeETH&#xa;isValidEVMAddress" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1c2c44;strokeColor=#5577AA;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="1">
           <mxGeometry x="1220" y="625" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="wdkconfig" value="wdkConfig.ts&#xa;Chain ID · RPC URL&#xa;Bundler URL&#xa;(Sepolia / mainnet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1c2c44;strokeColor=#5577AA;fontColor=#FFFFFF;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1425" y="625" width="165" height="70" as="geometry" />
         </mxCell>
 
         <!-- hooks → services -->

@@ -1,179 +1,92 @@
-# Direct Imports Migration - Summary
+# Import Architecture — Current State
 
-## Changes Made
+## Overview
 
-### 1. Removed All Barrel Export Files (index.ts)
-
-Deleted 16 unnecessary `index.ts` barrel export files:
-
-**App & Navigation:**
-- ❌ `src/app/navigation/index.ts`
-- ❌ `src/app/providers/index.ts`
-
-**Core Services:**
-- ❌ `src/core/api/index.ts`
-- ❌ `src/core/biometric/index.ts`
-- ❌ `src/core/storage/index.ts`
-- ❌ `src/core/utils/index.ts`
-
-**Modules:**
-- ❌ `src/modules/auth/hooks/index.ts`
-- ❌ `src/modules/auth/screens/index.ts`
-- ❌ `src/modules/wallet/hooks/index.ts`
-- ❌ `src/modules/wallet/screens/index.ts`
-- ❌ `src/modules/send/screens/index.ts`
-- ❌ `src/modules/receive/screens/index.ts`
-- ❌ `src/modules/transactions/hooks/index.ts`
-- ❌ `src/modules/transactions/screens/index.ts`
-
-**Shared & Theme:**
-- ❌ `src/shared/components/index.ts`
-- ❌ `src/theme/index.ts`
-
-**Kept:**
-- ✅ `src/store/store.ts` (renamed from index.ts - actual store configuration, not a barrel export)
-
-### 2. Updated All Import Statements
-
-#### Updated Files:
-1. **src/app/App.tsx**
-   - `./providers` → `./providers/AppProviders`
-   - `./navigation` → `./navigation/RootNavigator`
-   - `../theme` → `../theme/colors`
-   - `../store` → `../store/store`
-
-2. **src/app/navigation/RootNavigator.tsx**
-   - `../../modules/auth/hooks` → `../../modules/auth/hooks/useAuth`
-
-3. **src/app/navigation/AuthNavigator.tsx**
-   - `../../modules/auth/screens` → Direct imports from `/LoginScreen` and `/SetupScreen`
-
-4. **src/app/navigation/MainNavigator.tsx**
-   - `../../modules/wallet/screens` → `../../modules/wallet/screens/WalletScreen`
-   - `../../modules/send/screens` → `../../modules/send/screens/SendScreen`
-   - `../../modules/receive/screens` → `../../modules/receive/screens/ReceiveScreen`
-   - `../../modules/transactions/screens` → `../../modules/transactions/screens/TransactionsScreen`
-
-5. **src/theme/colors.ts**
-   - Added theme object export
-   - Imported from `./spacing.ts`
-   - Now serves as single source for all theme exports
-
-6. **src/store/hooks.ts**
-   - Updated to import from `./store` instead of `./index`
-
-### 3. Created New Documentation
-
-Created comprehensive documentation for the new structure:
-
-- ✅ **IMPORT_STRUCTURE.md** - Complete import reference guide
-- ✅ **README_SETUP.md** - Installation and setup guide
-- ✅ **Updated STRUCTURE.md** - Removed barrel export references
-
-Removed outdated files:
-- ❌ Deleted `IMPORT_FIXES.md` (outdated)
-- ❌ Deleted `INSTALLATION.md` (replaced with README_SETUP.md)
-
-## Current State
-
-### File Count
-- **29 TypeScript files** in src/
-- **0 barrel export files** (index.ts)
-- **All imports use direct file references**
-
-### Project Structure
-```
-src/
-├── app/
-│   ├── App.tsx
-│   ├── navigation/ (3 files)
-│   └── providers/ (1 file)
-├── store/
-│   ├── store.ts
-│   ├── hooks.ts
-│   └── slices/ (3 files)
-├── core/
-│   ├── api/ (2 files)
-│   ├── storage/ (1 file)
-│   ├── biometric/ (1 file)
-│   └── utils/ (2 files)
-├── modules/
-│   ├── auth/ (3 files: 2 screens, 1 hook)
-│   ├── wallet/ (2 files: 1 screen, 1 hook)
-│   ├── send/ (1 screen)
-│   ├── receive/ (1 screen)
-│   └── transactions/ (2 files: 1 screen, 1 hook)
-├── shared/
-│   └── components/ (5 files)
-└── theme/
-    ├── colors.ts (includes theme export)
-    └── spacing.ts
-```
-
-## Benefits of Direct Imports
-
-1. ✅ **Explicit Dependencies** - Clear where each import comes from
-2. ✅ **Better IDE Support** - Auto-complete works more reliably
-3. ✅ **Easier Refactoring** - No barrel export maintenance
-4. ✅ **Simpler Structure** - Fewer files to manage
-5. ✅ **Clear Module Boundaries** - Dependencies are obvious
-6. ✅ **Better Tree Shaking** - Bundlers can optimize better
-
-## Import Pattern Examples
-
-### Before (Barrel Exports)
-```typescript
-// ❌ Old way
-import { LoginScreen, SetupScreen } from '../../modules/auth/screens';
-import { useAuth } from '../../modules/auth/hooks';
-import { Button, Input, Loading } from '../../../shared/components';
-import { theme } from '../theme';
-```
-
-### After (Direct Imports)
-```typescript
-// ✅ New way
-import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
-import { SetupScreen } from '../../modules/auth/screens/SetupScreen';
-import { useAuth } from '../../modules/auth/hooks/useAuth';
-import { Button } from '../../../shared/components/Button';
-import { Input } from '../../../shared/components/Input';
-import { Loading } from '../../../shared/components/Loading';
-import { theme } from '../theme/colors';
-```
-
-## Verification
-
-### No Barrel Exports Remaining
-```bash
-find src -name "index.ts" -o -name "index.tsx"
-# Result: (empty - all removed)
-```
-
-### All Imports Updated
-```bash
-grep -r "from '\.\./\.\./\.\./.*'" src/ | grep -v node_modules
-# All imports use direct file paths
-```
-
-## Next Steps
-
-1. ✅ All barrel exports removed
-2. ✅ All imports updated to direct file paths
-3. ✅ Documentation updated
-4. ⏳ Install AsyncStorage (`npm install @react-native-async-storage/async-storage`)
-5. ⏳ Test the application
-6. ⏳ Implement actual screen logic
-
-## Documentation Reference
-
-- **STRUCTURE.md** - Folder structure overview
-- **IMPORT_STRUCTURE.md** - Complete import patterns reference
-- **README_SETUP.md** - Installation and setup guide
-- **DIRECT_IMPORTS_MIGRATION.md** - This file
+The project originally used barrel-export `index.ts` files everywhere. These were removed in an earlier migration pass. Since then, **selective barrel exports have been re-added** for domains where consumers commonly need multiple imports at once, while most module internals still use direct imports.
 
 ---
 
-**Migration Status**: ✅ Complete
+## Current Import Architecture
 
-All barrel exports have been successfully removed and replaced with direct imports throughout the codebase.
+### Directories with Barrel Exports (`index.ts`)
+
+| File | What it exports |
+|---|---|
+| `src/store/index.ts` | Store, typed hooks (`useAppDispatch`, `useAppSelector`, `useAppStore`), all slice actions + types from all three slices |
+| `src/theme/index.ts` | `colors`, `darkPalette`, `theme`, `typography`, `spacing`, `borderRadius`, `fontSize`, `fontWeight`, `shadows` |
+| `src/shared/components/index.ts` | `Button`, `Card`, `Input`, `Loading`, `ErrorView`, `ErrorBanner`, `AppIconCircle`, `ScreenHeader`, `SkeletonBlock`, `WalletCardSkeleton`, `TransactionListSkeleton` |
+| `src/constants/strings/index.ts` | All per-feature string constant objects |
+
+### Directories without Barrel Exports (direct imports only)
+
+| Directory | Import pattern |
+|---|---|
+| `src/core/api/` | `import { wdkService } from '../../../core/api/wdkService'` |
+| `src/core/biometric/` | `import { biometricService } from '../../../core/biometric/biometricService'` |
+| `src/core/config/` | `import { wdkConfigs } from '../../../core/config/wdkConfig'` |
+| `src/core/storage/` | `import { storage } from '../../../core/storage/storage'` |
+| `src/core/utils/` | `import { truncateAddress } from '../../../core/utils/formatters'` |
+| `src/app/navigation/` | Direct imports from individual navigator files |
+| `src/app/providers/` | Direct imports from individual provider files |
+| `src/modules/**/hooks/` | Direct imports from individual hook files |
+| `src/modules/**/screens/` | Direct imports from individual screen files |
+
+---
+
+## Import Pattern Examples
+
+### Barrel import (store)
+```typescript
+// ✅ One import for multiple store values
+import {
+  useAppDispatch,
+  useAppSelector,
+  setUnlocked,
+  addManagedWallet,
+  setTransactions,
+} from '../../../store';
+import type { ManagedWallet, Transaction } from '../../../store';
+```
+
+### Direct import (core services)
+```typescript
+// ✅ Direct — core services always use direct imports
+import { wdkService } from '../../../core/api/wdkService';
+import { walletStorageService } from '../../../core/api/walletStorageService';
+import { truncateAddress } from '../../../core/utils/formatters';
+```
+
+### Mixed (shared components)
+```typescript
+// ✅ Barrel — fine for many components from the same directory
+import { Button, Card, ScreenHeader, WalletCardSkeleton } from '../../../shared/components';
+
+// ✅ Direct — equally valid
+import { Button } from '../../../shared/components/Button';
+```
+
+---
+
+## Principles
+
+1. **Core services always use direct imports** — explicit dependency tracking for security-critical code.
+2. **State/UI domains expose barrels** — store, theme, shared components, and string constants are used widely; barrels reduce import boilerplate.
+3. **Module internals use direct imports** — screens import their own hooks directly; no module imports another module's internals via barrel.
+4. **No circular imports** — modules never import from each other; they share only through `store`, `theme`, `shared/components`, and `core`.
+
+---
+
+## File Count (current)
+
+```
+src/                          ~62 TypeScript / JavaScript files
+  ├── app/                     5 files (App + 3 nav + 2 providers)
+  ├── constants/strings/       7 files (6 domain + 1 barrel)
+  ├── core/                   10 files (api 4, biometric 1, config 2, storage 1, utils 4)
+  ├── modules/                11 files (5 auth + 3 wallet + 1 send + 1 receive + 2 tx)
+  ├── shared/components/      10 files (9 components + 1 barrel)
+  ├── shims/                   1 file
+  ├── store/                   5 files (store + hooks + barrel + 3 slices)
+  ├── theme/                   4 files (colors + typography + spacing + barrel)
+  └── globals.d.ts             1 file
+```

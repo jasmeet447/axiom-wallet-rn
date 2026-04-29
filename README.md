@@ -70,11 +70,16 @@ src/
 │   │   └── wdkService.ts           # Wallet lifecycle: create, import, sign & send
 │   ├── biometric/
 │   │   └── biometricService.ts     # Device biometric check + legacy credential helpers
+│   ├── config/
+│   │   ├── wdkConfig.ts            # WDK network config (chain ID, RPC, bundler)
+│   │   └── wdkBundle.ts            # WDK bundle reference placeholder
 │   ├── storage/
 │   │   └── storage.ts              # AsyncStorage wrapper (non-sensitive prefs only)
 │   └── utils/
 │       ├── evmSigner.ts            # On-device EIP-155 tx signer (RLP + secp256k1)
-│       └── formatters.ts           # truncateAddress, formatETHBalance, calcFeeETH, …
+│       ├── formatters.ts           # truncateAddress, formatETHBalance, calcFeeETH, …
+│       ├── helpers.ts              # General-purpose utilities
+│       └── errors.ts               # Typed error classes
 │
 ├── modules/
 │   ├── auth/
@@ -84,19 +89,26 @@ src/
 │   │   │   └── useAppLock.ts       # Background re-lock after 30 s
 │   │   └── screens/
 │   │       ├── SetupScreen.tsx
+│   │       ├── LoginScreen.tsx
 │   │       ├── CreateWalletScreen.tsx
 │   │       ├── ImportWalletScreen.tsx
 │   │       └── UnlockScreen.tsx
 │   ├── wallet/
-│   │   ├── hooks/useWdkWallet.ts   # Central wallet lifecycle hook
+│   │   ├── hooks/
+│   │   │   ├── useWdkWallet.ts     # Central wallet lifecycle hook
+│   │   │   └── useWallet.ts        # Balance / transaction-fetch hook
 │   │   └── screens/WalletScreen.tsx
 │   ├── send/screens/SendScreen.tsx
 │   ├── receive/screens/ReceiveScreen.tsx
 │   └── transactions/screens/TransactionsScreen.tsx
 │
 ├── shared/
-│   └── components/                 # Button, Card, Input, SkeletonLoader,
-│                                   # AppIconCircle, ScreenHeader, ErrorBanner
+│   └── components/                 # Button, Card, Input, Loading, ErrorView,
+│                                   # ErrorBanner, SkeletonLoader (WalletCardSkeleton,
+│                                   # TransactionListSkeleton), AppIconCircle, ScreenHeader
+│
+├── shims/
+│   └── expo-local-authentication.js  # Shim for expo biometric API compatibility
 │
 ├── store/
 │   ├── store.ts

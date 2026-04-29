@@ -1,35 +1,51 @@
-# Import Structure - Direct Imports
+# Import Structure
 
 ## Overview
-This project uses **direct imports** instead of barrel exports (index.ts files). All imports point directly to the source files where components, functions, or types are defined.
+
+This project supports two import styles:
+
+- **Direct imports** — point straight to the source file. Always safe, always explicit.
+- **Barrel imports** — use the `index.ts` in `store/`, `theme/`, `shared/components/`, and `constants/strings/`. Convenient for consumers that need multiple exports from one domain.
+
+```typescript
+// ✅ Direct import
+import { useAuth } from '../../modules/auth/hooks/useAuth';
+import { Button } from '../../../shared/components/Button';
+
+// ✅ Barrel import (also valid)
+import { Button, Card, Input } from '../../../shared/components';
+import { setUnlocked, walletSlice } from '../../../store';
+```
+
+---
 
 ## Import Patterns
 
 ### App Entry & Navigation
 
-#### From root App.tsx
 ```typescript
+// root index.js
 import App from './src/app/App';
-```
 
-#### In src/app/App.tsx
-```typescript
+// src/app/App.tsx
 import { AppProviders } from './providers/AppProviders';
 import { RootNavigator } from './navigation/RootNavigator';
 import { store } from '../store/store';
 import { theme } from '../theme/colors';
-```
 
-#### In Navigation Files
-```typescript
+// src/app/providers/AppProviders.tsx
+import { WdkProvider } from './WdkProvider';
+
 // src/app/navigation/RootNavigator.tsx
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { useAuth } from '../../modules/auth/hooks/useAuth';
 
 // src/app/navigation/AuthNavigator.tsx
-import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
 import { SetupScreen } from '../../modules/auth/screens/SetupScreen';
+import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
+import { CreateWalletScreen } from '../../modules/auth/screens/CreateWalletScreen';
+import { ImportWalletScreen } from '../../modules/auth/screens/ImportWalletScreen';
 
 // src/app/navigation/MainNavigator.tsx
 import { WalletScreen } from '../../modules/wallet/screens/WalletScreen';
@@ -40,68 +56,66 @@ import { TransactionsScreen } from '../../modules/transactions/screens/Transacti
 
 ### Store Imports
 
-#### Store Configuration
 ```typescript
-// From anywhere
-import { store } from '../../../store/store';  // Adjust path levels as needed
-```
+// Direct — store configuration
+import { store } from '../../../store/store';
+import type { RootState, AppDispatch, AppStore } from '../../../store/store';
 
-#### Redux Hooks
-```typescript
-import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-```
+// Direct — typed hooks
+import { useAppDispatch, useAppSelector, useAppStore } from '../../../store/hooks';
 
-#### Redux Slices
-```typescript
-import { setUser, clearUser } from '../../../store/slices/authSlice';
-import { setWallet, updateBalance } from '../../../store/slices/walletSlice';
-import { setTransactions, addTransaction } from '../../../store/slices/transactionsSlice';
-```
+// Direct — slices
+import { setUnlocked, setAuthenticated, resetAuthState } from '../../../store/slices/authSlice';
+import { addManagedWallet, setActiveWallet, updateBalance } from '../../../store/slices/walletSlice';
+import { setTransactions, appendTransactions, addTransaction } from '../../../store/slices/transactionsSlice';
 
-#### Types from Slices
-```typescript
-import type { User } from '../../../store/slices/authSlice';
-import type { WalletData, Token } from '../../../store/slices/walletSlice';
-import type { Transaction } from '../../../store/slices/transactionsSlice';
+// Barrel — everything from one import
+import {
+  store,
+  useAppDispatch,
+  useAppSelector,
+  setUnlocked,
+  setAuthenticated,
+  addManagedWallet,
+  setActiveWallet,
+  setTransactions,
+} from '../../../store';
+import type { RootState, AppDispatch, ManagedWallet, Transaction } from '../../../store';
 ```
 
 ### Core Services Imports
 
-#### API
 ```typescript
-import { api, apiClient } from '../../../core/api/apiClient';
+// API client
+import { apiClient } from '../../../core/api/apiClient';
 import { blockchainApi } from '../../../core/api/blockchainApi';
 import type { BlockchainTransaction, WalletBalance } from '../../../core/api/blockchainApi';
-```
 
-#### Storage
-```typescript
-import { storage, STORAGE_KEYS } from '../../../core/storage/storage';
-```
+// Wallet storage (Keychain)
+import { walletStorageService } from '../../../core/api/walletStorageService';
 
-#### Biometric
-```typescript
+// WDK service (wallet lifecycle + signing)
+import { wdkService } from '../../../core/api/wdkService';
+
+// Biometric
 import { biometricService } from '../../../core/biometric/biometricService';
-import type { BiometricCredentials } from '../../../core/biometric/biometricService';
-```
 
-#### Utils
-```typescript
-// helpers.ts
+// WDK config
+import { wdkConfigs, ETH_ASSET } from '../../../core/config/wdkConfig';
+
+// Storage (AsyncStorage wrapper)
+import { storage, STORAGE_KEYS } from '../../../core/storage/storage';
+
+// Utils
+import { signEvmTransaction } from '../../../core/utils/evmSigner';
 import {
-  formatAddress,
-  formatBalance,
-  formatCurrency,
-  formatDate,
-  isValidAddress,
-  isValidAmount,
-  truncate,
-  wait,
-  debounce
-} from '../../../core/utils/helpers';
-
-// errors.ts
-import { ERROR_MESSAGES, AppError, handleError } from '../../../core/utils/errors';
+  truncateAddress,
+  formatETHBalance,
+  calcFeeETH,
+  isValidEVMAddress,
+} from '../../../core/utils/formatters';
+import { debounce, wait } from '../../../core/utils/helpers';
+import { AppError, handleError } from '../../../core/utils/errors';
 ```
 
 ### Module Hooks Imports
@@ -109,8 +123,11 @@ import { ERROR_MESSAGES, AppError, handleError } from '../../../core/utils/error
 ```typescript
 // Auth
 import { useAuth } from '../../modules/auth/hooks/useAuth';
+import { useBiometricAuth } from '../../modules/auth/hooks/useBiometricAuth';
+import { useAppLock } from '../../modules/auth/hooks/useAppLock';
 
 // Wallet
+import { useWdkWallet } from '../../modules/wallet/hooks/useWdkWallet';
 import { useWallet } from '../../modules/wallet/hooks/useWallet';
 
 // Transactions
@@ -120,148 +137,167 @@ import { useTransactions } from '../../modules/transactions/hooks/useTransaction
 ### Shared Components Imports
 
 ```typescript
+// Direct imports
 import { Button } from '../../../shared/components/Button';
+import { Card } from '../../../shared/components/Card';
 import { Input } from '../../../shared/components/Input';
 import { Loading } from '../../../shared/components/Loading';
 import { ErrorView } from '../../../shared/components/ErrorView';
-import { Card } from '../../../shared/components/Card';
+import { ErrorBanner } from '../../../shared/components/ErrorBanner';
+import { AppIconCircle } from '../../../shared/components/AppIconCircle';
+import { ScreenHeader } from '../../../shared/components/ScreenHeader';
+import {
+  SkeletonBlock,
+  WalletCardSkeleton,
+  TransactionListSkeleton,
+} from '../../../shared/components/SkeletonLoader';
+
+// Barrel import (also valid)
+import {
+  Button,
+  Card,
+  Input,
+  Loading,
+  ErrorView,
+  ErrorBanner,
+  AppIconCircle,
+  ScreenHeader,
+  WalletCardSkeleton,
+  TransactionListSkeleton,
+} from '../../../shared/components';
 ```
 
 ### Theme Imports
 
 ```typescript
-// Import the complete theme object
-import { theme } from '../theme/colors';
-
-// Or import specific parts
-import { colors } from '../theme/colors';
+// Direct imports
+import { colors, darkPalette, theme } from '../theme/colors';
 import { spacing, borderRadius, fontSize, fontWeight, shadows } from '../theme/spacing';
-
-// Types
+import { typography } from '../theme/typography';
 import type { ColorScheme, Colors, Theme } from '../theme/colors';
+
+// Barrel import
+import { colors, typography, spacing, borderRadius, theme } from '../theme';
 ```
+
+### String Constants Imports
+
+```typescript
+// Direct imports
+import { AUTH_STRINGS } from '../../../constants/strings/auth';
+import { COMMON_STRINGS } from '../../../constants/strings/common';
+import { SEND_STRINGS } from '../../../constants/strings/send';
+import { RECEIVE_STRINGS } from '../../../constants/strings/receive';
+import { WALLET_STRINGS } from '../../../constants/strings/wallet';
+import { TRANSACTIONS_STRINGS } from '../../../constants/strings/transactions';
+
+// Barrel import
+import { AUTH_STRINGS, SEND_STRINGS, WALLET_STRINGS } from '../../../constants/strings';
+```
+
+---
 
 ## File Structure Reference
 
 ```
 src/
 ├── app/
-│   ├── App.tsx                           # Main app component
+│   ├── App.tsx
 │   ├── navigation/
-│   │   ├── RootNavigator.tsx            # Root navigator
-│   │   ├── AuthNavigator.tsx            # Auth stack
-│   │   └── MainNavigator.tsx            # Main stack
+│   │   ├── RootNavigator.tsx
+│   │   ├── AuthNavigator.tsx
+│   │   └── MainNavigator.tsx
 │   └── providers/
-│       └── AppProviders.tsx             # Context providers
+│       ├── AppProviders.tsx
+│       └── WdkProvider.tsx
 │
-├── store/
-│   ├── store.ts                          # Redux store config
-│   ├── hooks.ts                          # Typed hooks
-│   └── slices/
-│       ├── authSlice.ts
-│       ├── walletSlice.ts
-│       └── transactionsSlice.ts
+├── constants/
+│   └── strings/
+│       ├── auth.ts
+│       ├── common.ts
+│       ├── receive.ts
+│       ├── send.ts
+│       ├── transactions.ts
+│       ├── wallet.ts
+│       └── index.ts           ← barrel
 │
 ├── core/
 │   ├── api/
-│   │   ├── apiClient.ts                 # Axios client
-│   │   └── blockchainApi.ts             # Blockchain API
-│   ├── storage/
-│   │   └── storage.ts                   # AsyncStorage wrapper
+│   │   ├── apiClient.ts
+│   │   ├── blockchainApi.ts
+│   │   ├── walletStorageService.ts
+│   │   └── wdkService.ts
 │   ├── biometric/
-│   │   └── biometricService.ts          # Keychain/biometric
+│   │   └── biometricService.ts
+│   ├── config/
+│   │   ├── wdkConfig.ts
+│   │   └── wdkBundle.ts
+│   ├── storage/
+│   │   └── storage.ts
 │   └── utils/
-│       ├── helpers.ts                   # Helper functions
-│       └── errors.ts                    # Error handling
+│       ├── evmSigner.ts
+│       ├── formatters.ts
+│       ├── helpers.ts
+│       └── errors.ts
 │
 ├── modules/
 │   ├── auth/
 │   │   ├── screens/
+│   │   │   ├── SetupScreen.tsx
 │   │   │   ├── LoginScreen.tsx
-│   │   │   └── SetupScreen.tsx
-│   │   ├── components/
+│   │   │   ├── CreateWalletScreen.tsx
+│   │   │   ├── ImportWalletScreen.tsx
+│   │   │   └── UnlockScreen.tsx
 │   │   └── hooks/
-│   │       └── useAuth.ts
+│   │       ├── useAuth.ts
+│   │       ├── useBiometricAuth.ts
+│   │       └── useAppLock.ts
 │   ├── wallet/
 │   │   ├── screens/
 │   │   │   └── WalletScreen.tsx
-│   │   ├── components/
 │   │   └── hooks/
+│   │       ├── useWdkWallet.ts
 │   │       └── useWallet.ts
 │   ├── send/
-│   │   ├── screens/
-│   │   │   └── SendScreen.tsx
-│   │   ├── components/
-│   │   └── hooks/
+│   │   └── screens/
+│   │       └── SendScreen.tsx
 │   ├── receive/
-│   │   ├── screens/
-│   │   │   └── ReceiveScreen.tsx
-│   │   ├── components/
-│   │   └── hooks/
+│   │   └── screens/
+│   │       └── ReceiveScreen.tsx
 │   └── transactions/
 │       ├── screens/
 │       │   └── TransactionsScreen.tsx
-│       ├── components/
 │       └── hooks/
 │           └── useTransactions.ts
 │
 ├── shared/
 │   └── components/
+│       ├── AppIconCircle.tsx
 │       ├── Button.tsx
+│       ├── Card.tsx
+│       ├── ErrorBanner.tsx
+│       ├── ErrorView.tsx
 │       ├── Input.tsx
 │       ├── Loading.tsx
-│       ├── ErrorView.tsx
-│       └── Card.tsx
+│       ├── ScreenHeader.tsx
+│       ├── SkeletonLoader.tsx
+│       └── index.ts           ← barrel
+│
+├── shims/
+│   └── expo-local-authentication.js
+│
+├── store/
+│   ├── store.ts
+│   ├── hooks.ts
+│   ├── index.ts               ← barrel
+│   └── slices/
+│       ├── authSlice.ts
+│       ├── walletSlice.ts
+│       └── transactionsSlice.ts
 │
 └── theme/
-    ├── colors.ts                         # Colors + theme object
-    └── spacing.ts                        # Spacing, fonts, shadows
+    ├── colors.ts
+    ├── typography.ts
+    ├── spacing.ts
+    └── index.ts               ← barrel
 ```
-
-## Benefits of Direct Imports
-
-1. **Explicit Dependencies** - Easy to see exactly where each import comes from
-2. **Better IDE Support** - Auto-complete works more reliably
-3. **Easier Refactoring** - Moving files doesn't break barrel exports
-4. **Simpler Structure** - No need to maintain index.ts files
-5. **Clear Module Boundaries** - Direct paths make dependencies obvious
-6. **Better Tree Shaking** - Bundlers can optimize better without barrel exports
-
-## Migration from Barrel Exports
-
-If you had code using barrel exports:
-
-```typescript
-// ❌ Old (with barrel exports via index.ts)
-import { LoginScreen, SetupScreen } from '../../modules/auth/screens';
-import { useAuth } from '../../modules/auth/hooks';
-import { Button, Input } from '../../../shared/components';
-
-// ✅ New (direct imports)
-import { LoginScreen } from '../../modules/auth/screens/LoginScreen';
-import { SetupScreen } from '../../modules/auth/screens/SetupScreen';
-import { useAuth } from '../../modules/auth/hooks/useAuth';
-import { Button } from '../../../shared/components/Button';
-import { Input } from '../../../shared/components/Input';
-```
-
-## Path Reference by Location
-
-### From `src/app/App.tsx`:
-- Providers: `./providers/AppProviders`
-- Navigation: `./navigation/RootNavigator`
-- Store: `../store/store`
-- Theme: `../theme/colors`
-
-### From `src/app/navigation/*.tsx`:
-- Modules: `../../modules/{module}/{type}/{FileName}`
-- Example: `../../modules/auth/screens/LoginScreen`
-
-### From `src/modules/{module}/hooks/*.ts`:
-- Store: `../../../store/hooks` or `../../../store/slices/{slice}`
-- Core: `../../../core/{service}/{file}`
-
-### From `src/modules/{module}/screens/*.tsx`:
-- Hooks: `../hooks/{hookName}`
-- Shared Components: `../../../shared/components/{ComponentName}`
-- Theme: `../../../theme/colors`
