@@ -350,4 +350,3 @@ const styles = StyleSheet.create({
   loader: { marginBottom: spacing.md },
   iconMr: { marginRight: spacing.sm },
 });
-
